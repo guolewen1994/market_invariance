@@ -1,0 +1,1223 @@
+{smcl}
+{com}{sf}{ul off}{txt}{.-}
+      name:  {res}<unnamed>
+       {txt}log:  {res}/media/guolewen/regular_files/guolewen/Market_invariance/JAPAN/pooled_results/pooled_results.smcl
+  {txt}log type:  {res}smcl
+ {txt}opened on:  {res}10 Mar 2021, 00:51:06
+{txt}
+{com}. import delimited "/media/guolewen/intraday_data/needs/day_stock_computed_data/full_data.csv" // import data
+{res}{text}(16 vars, 318,941 obs)
+
+{com}. xtset ticker date
+{res}{txt}{col 8}panel variable:  {res}ticker (unbalanced)
+{txt}{col 9}time variable:  {res}{col 25}date, 20190401 to 20191031, but with gaps
+{txt}{col 17}delta:  {res}1 unit
+{txt}
+{com}. sum // summary statistics
+
+{txt}    Variable {c |}        Obs        Mean    Std. Dev.       Min        Max
+{hline 13}{c +}{hline 57}
+{space 6}ticker {c |}{res}    318,941    5915.912    2395.636       1301       9997
+{txt}{space 8}date {c |}{res}    318,941    2.02e+07    197.7817   2.02e+07   2.02e+07
+{txt}{space 5}nprints {c |}{res}    318,941    665.4616    1447.218          1      70400
+{txt}{space 6}yenvol {c |}{res}    318,941    8.11e+08    3.35e+09      20200   1.83e+11
+{txt}{space 9}vol {c |}{res}    318,941    482930.8     2851139        100   1.96e+08
+{txt}{hline 13}{c +}{hline 57}
+{space 3}avg_price {c |}{res}    318,941    1967.154    2860.567    5.89759   73229.45
+{txt}avg_prints~e {c |}{res}    318,941    959.8384    25803.88        100    3397911
+{txt}{space 4}ticksize {c |}{res}    318,941     2.00517    3.799731          1        100
+{txt}d_med_tw_s~e {c |}{res}    318,941    160.9677    1852.331        100     469200
+{txt}d_20p_tw_s~e {c |}{res}    318,941    117.1718     1846.35        100     469200
+{txt}{hline 13}{c +}{hline 57}
+d_80p_tw_s~e {c |}{res}    318,941    10272.15    247396.7        100   4.46e+07
+{txt}d_med_vw_s~e {c |}{res}    318,941    20651.95    748050.1        100   7.49e+07
+{txt}{space 8}isin {c |}{res}          0
+{txt}{space 2}volatility {c |}{res}    318,941    .0177381    .0099464          0   .5203364
+{txt}parkinsonvol {c |}{res}    318,941    .0146784    .0075982          0   .1240815
+{txt}{hline 13}{c +}{hline 57}
+{space 4}industry {c |}{res}          0
+{txt}
+{com}. 
+. 
+. gen dollarvol = yenvol / 100 // yen-dollar volume adjustment
+{txt}
+{com}. gen w1 = dollarvol * volatility // trading activity based on standard volatility
+{txt}
+{com}. gen w2 = dollarvol * parkinsonvol // trading activity based on parkinson vol
+{txt}
+{com}. gen scaled1prints = nprints * ((w1)^(-2/3)) // scaled prints
+{txt}(70 missing values generated)
+
+{com}. gen scaledbsprints = nprints * (w1^(-1)) // invariant bet size
+{txt}(70 missing values generated)
+
+{com}. gen scaledbfprints = nprints // invariant bet frequency
+{txt}
+{com}. gen logw1 = log(w1)
+{txt}(70 missing values generated)
+
+{com}. gen logscaled1prints = log(scaled1prints)
+{txt}(70 missing values generated)
+
+{com}. gen logscaledbsprints = log(scaledbsprints)
+{txt}(70 missing values generated)
+
+{com}. gen logscaledbfprints = log(scaledbfprints)
+{txt}
+{com}. gen benchmarkw1 = 601000 * 0.016 // benchmark trading volatility
+{txt}
+{com}. gen logw1dbw1 = log(w1 / benchmarkw1) // right-hand side variable in reg(1) and reg(2)
+{txt}(70 missing values generated)
+
+{com}. label variable logw1dbw1 "Log Adj-Trading Activity"
+{txt}
+{com}. /* Number of Print Variable    */
+. gen lognprints = log(nprints) // left-hand side variable in reg (1)
+{txt}
+{com}. label variable lognprints "Log Number of Prints"
+{txt}
+{com}. /* Print Size Variable    */
+. gen logvwsize = log(d_med_vw_size / vol) // Volume-weighted median print size
+{txt}
+{com}. gen logtwsize = log(d_med_tw_size / vol) // Trade-weighted median print size
+{txt}
+{com}. gen logtw80size = log(d_80p_tw_size / vol) // TW 80% print size 
+{txt}
+{com}. gen logtw20size = log(d_20p_tw_size / vol) // TW 20% print size 
+{txt}
+{com}. egen newgroup=group(industry date) // se clustered by both industry and date
+{txt}
+{com}. 
+. *-------------------------------Fig.1----------------------------------
+. /*
+> #d  ;
+> twoway
+>         scatter logscaled1prints logw1,
+>         title('Microstructure Invariance');
+> graph save fig1.gph, 
+> replace;
+> twoway
+>         scatter logscaledbfprints logw1,
+>         title('Invariant Bet Frequency');
+> graph save fig2.gph,
+> replace;
+> twoway
+>         scatter logscaledbsprints logw1,
+>         title('Invariant Bet Size');
+> graph save fig3.gph,
+> replace;
+> #d cr
+> 
+> graph combine fig1.gph fig2.gph fig3.gph
+> graph save combine_fig1.jpg, replace
+> */
+. 
+. *------------------------Pooled Regressions for number of prints----------
+. * Ln (Nit) = mu + alpha (Ln(Wit/W*)) + error              (1)
+. * Both OLS and Poisson regressions are estimated
+. * OLS Pooled Results
+. reg lognprints logw1dbw1, cluster(newgroup) // Coefficient: .6840641
+
+{txt}Linear regression                               Number of obs     = {res}   318,871
+                                                {txt}F(1, 4107)        >  {res} 99999.00
+                                                {txt}Prob > F          = {res}    0.0000
+                                                {txt}R-squared         = {res}    0.9141
+                                                {txt}Root MSE          =    {res}  .5448
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}  lognprints{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2} .6841032{col 26}{space 2} .0008249{col 37}{space 1}  829.31{col 46}{space 3}0.000{col 54}{space 4} .6824859{col 67}{space 3} .6857205
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2} 5.097823{col 26}{space 2} .0025904{col 37}{space 1} 1967.95{col 46}{space 3}0.000{col 54}{space 4} 5.092745{col 67}{space 3} 5.102902
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}{txt}
+{com}. outreg2 using table2.tex, replace ctitle("OLS") title("Table II Pooled Least Square Estimates of Number of Prints") label adjr2 addtext(Stock FE, NO, Day FE, NO) dec(3) 
+{txt}{stata `"shellout using `"table2.tex"'"':table2.tex}
+{browse `"/media/guolewen/regular_files/guolewen/Market_invariance/JAPAN/pooled_results"' :dir}{com} : {txt}{stata `"seeout using "table2.txt", label"':seeout}
+
+{com}. reg lognprints logw1dbw1, cluster(industry) 
+
+{txt}Linear regression                               Number of obs     = {res}   318,871
+                                                {txt}F(1, 32)          =  {res}  6793.67
+                                                {txt}Prob > F          = {res}    0.0000
+                                                {txt}R-squared         = {res}    0.9141
+                                                {txt}Root MSE          =    {res}  .5448
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:33} clusters in industry)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}  lognprints{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2} .6841032{col 26}{space 2} .0082998{col 37}{space 1}   82.42{col 46}{space 3}0.000{col 54}{space 4}  .667197{col 67}{space 3} .7010094
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2} 5.097823{col 26}{space 2} .0187375{col 37}{space 1}  272.06{col 46}{space 3}0.000{col 54}{space 4} 5.059656{col 67}{space 3} 5.135991
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}{txt}
+{com}. * Poisson Pooled Results
+. qui poisson lognprints logw1dbw1, cluster(newgroup)
+{txt}
+{com}. margins, dydx(*) // dydx: .7058628 
+{res}
+{txt}Average marginal effects{col 49}Number of obs{col 67}= {res}   318,871
+{txt}{col 1}Model VCE{col 14}: {res}Robust
+
+{txt}{p2colset 1 14 16 2}{...}
+{p2col:Expression}:{space 1}{res:Predicted number of events, predict()}{p_end}
+{p2colreset}{...}
+{txt}{p2colset 1 14 16 2}{...}
+{p2col:dy/dx w.r.t.}:{space 1}{res:logw1dbw1}{p_end}
+{p2colreset}{...}
+
+{res}{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26} Delta-method
+{col 14}{c |}      dy/dx{col 26}   Std. Err.{col 38}      z{col 46}   P>|z|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2} .7059719{col 26}{space 2} .0016734{col 37}{space 1}  421.89{col 46}{space 3}0.000{col 54}{space 4} .7026922{col 67}{space 3} .7092517
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}{txt}
+{com}. qui poisson lognprints logw1dbw1, cluster(industry)
+{txt}
+{com}. margins, dydx(*) 
+{res}
+{txt}Average marginal effects{col 49}Number of obs{col 67}= {res}   318,871
+{txt}{col 1}Model VCE{col 14}: {res}Robust
+
+{txt}{p2colset 1 14 16 2}{...}
+{p2col:Expression}:{space 1}{res:Predicted number of events, predict()}{p_end}
+{p2colreset}{...}
+{txt}{p2colset 1 14 16 2}{...}
+{p2col:dy/dx w.r.t.}:{space 1}{res:logw1dbw1}{p_end}
+{p2colreset}{...}
+
+{res}{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26} Delta-method
+{col 14}{c |}      dy/dx{col 26}   Std. Err.{col 38}      z{col 46}   P>|z|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2} .7059719{col 26}{space 2} .0174486{col 37}{space 1}   40.46{col 46}{space 3}0.000{col 54}{space 4} .6717732{col 67}{space 3} .7401706
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}{txt}
+{com}. 
+. *------------------------Pooled Regressions for print size-----------------
+. * f{c -(}Ln (|X|/V){c )-} = mu + alpha (Ln(Wit/W*)) + error          (2)
+. * OLS Pooled Results
+. * Volume-weighted dependent variable
+. reg logvwsize logw1dbw1, cluster(newgroup) // Coefficient: -.6172054
+
+{txt}Linear regression                               Number of obs     = {res}   318,871
+                                                {txt}F(1, 4107)        >  {res} 99999.00
+                                                {txt}Prob > F          = {res}    0.0000
+                                                {txt}R-squared         = {res}    0.7685
+                                                {txt}Root MSE          =    {res} .87998
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}   logvwsize{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2}-.6172572{col 26}{space 2} .0011853{col 37}{space 1} -520.77{col 46}{space 3}0.000{col 54}{space 4} -.619581{col 67}{space 3}-.6149334
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2}-4.548445{col 26}{space 2} .0046063{col 37}{space 1} -987.44{col 46}{space 3}0.000{col 54}{space 4}-4.557476{col 67}{space 3}-4.539415
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}{txt}
+{com}. 
+. * Trade-weighted dependent variable (median, 80p, 20p)
+. reg logtwsize logw1dbw1, cluster(newgroup) // Coefficient: -.7495869
+
+{txt}Linear regression                               Number of obs     = {res}   318,871
+                                                {txt}F(1, 4107)        >  {res} 99999.00
+                                                {txt}Prob > F          = {res}    0.0000
+                                                {txt}R-squared         = {res}    0.8878
+                                                {txt}Root MSE          =    {res} .69214
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}   logtwsize{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2}-.7496273{col 26}{space 2}  .001016{col 37}{space 1} -737.82{col 46}{space 3}0.000{col 54}{space 4}-.7516192{col 67}{space 3}-.7476354
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2}-5.928474{col 26}{space 2} .0035289{col 37}{space 1}-1679.99{col 46}{space 3}0.000{col 54}{space 4}-5.935393{col 67}{space 3}-5.921556
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}{txt}
+{com}. reg logtw80size logw1dbw1, cluster(newgroup) // Coefficient: -.651438 
+
+{txt}Linear regression                               Number of obs     = {res}   318,871
+                                                {txt}F(1, 4107)        >  {res} 99999.00
+                                                {txt}Prob > F          = {res}    0.0000
+                                                {txt}R-squared         = {res}    0.8025
+                                                {txt}Root MSE          =    {res} .83934
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1} logtw80size{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2}-.6514766{col 26}{space 2} .0012897{col 37}{space 1} -505.13{col 46}{space 3}0.000{col 54}{space 4}-.6540052{col 67}{space 3}-.6489481
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2}-5.029029{col 26}{space 2} .0031402{col 37}{space 1}-1601.52{col 46}{space 3}0.000{col 54}{space 4}-5.035185{col 67}{space 3}-5.022873
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}{txt}
+{com}. reg logtw20size logw1dbw1, cluster(newgroup) // Coefficient: -.7941355 
+
+{txt}Linear regression                               Number of obs     = {res}   318,871
+                                                {txt}F(1, 4107)        >  {res} 99999.00
+                                                {txt}Prob > F          = {res}    0.0000
+                                                {txt}R-squared         = {res}    0.8546
+                                                {txt}Root MSE          =    {res}  .8507
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1} logtw20size{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2} -.794157{col 26}{space 2} .0012826{col 37}{space 1} -619.17{col 46}{space 3}0.000{col 54}{space 4}-.7966716{col 67}{space 3}-.7916424
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2}-6.152285{col 26}{space 2}   .00404{col 37}{space 1}-1522.86{col 46}{space 3}0.000{col 54}{space 4}-6.160206{col 67}{space 3}-6.144365
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}{txt}
+{com}. 
+. *--------------------Fixed Effects (LSDV) for number of prints---------- 
+. * LSDV estimator, standard errors are clustered by both date and industry
+. areg lognprints logw1dbw1, absorb(ticker) cluster(newgroup) // Stock FE .63147
+
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:ticker}{col 49}No. of categories{col 67}= {res}     2,644
+{txt}{col 49}F({res}   1{txt},{res}   4107{txt}){col 67}= {res} 220699.09
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.9702
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.9699
+{txt}{col 49}Root MSE{col 67}= {res}    0.3224
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}  lognprints{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2} .6315776{col 26}{space 2} .0013444{col 37}{space 1}  469.79{col 46}{space 3}0.000{col 54}{space 4} .6289419{col 67}{space 3} .6342134
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2} 5.100121{col 26}{space 2} .0020003{col 37}{space 1} 2549.74{col 46}{space 3}0.000{col 54}{space 4}   5.0962{col 67}{space 3} 5.104043
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. outreg2 using table2.tex, append adjr2 ctitle("LSDV") label addtext(Stock FE, YES, Day FE, NO) dec(3)
+{txt}{stata `"shellout using `"table2.tex"'"':table2.tex}
+{browse `"/media/guolewen/regular_files/guolewen/Market_invariance/JAPAN/pooled_results"' :dir}{com} : {txt}{stata `"seeout using "table2.txt", label"':seeout}
+
+{com}. areg lognprints logw1dbw1, absorb(date) cluster(newgroup)  // Day FE .6839493
+
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:date}{col 49}No. of categories{col 67}= {res}       125
+{txt}{col 49}F({res}   1{txt},{res}   4107{txt}){col 67}= {res} 708900.00
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.9161
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.9161
+{txt}{col 49}Root MSE{col 67}= {res}    0.5383
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}  lognprints{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2} .6839911{col 26}{space 2} .0008124{col 37}{space 1}  841.96{col 46}{space 3}0.000{col 54}{space 4} .6823984{col 67}{space 3} .6855838
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2} 5.097828{col 26}{space 2} .0018512{col 37}{space 1} 2753.82{col 46}{space 3}0.000{col 54}{space 4} 5.094199{col 67}{space 3} 5.101458
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. outreg2 using table2.tex, append adjr2 ctitle("LSDV") label addtext(Stock FE, NO, Day FE, YES) dec(3)
+{txt}{stata `"shellout using `"table2.tex"'"':table2.tex}
+{browse `"/media/guolewen/regular_files/guolewen/Market_invariance/JAPAN/pooled_results"' :dir}{com} : {txt}{stata `"seeout using "table2.txt", label"':seeout}
+
+{com}. areg lognprints logw1dbw1 i.date, absorb(ticker) cluster(newgroup) // two-way FE .626967
+{res}
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:ticker}{col 49}No. of categories{col 67}= {res}     2,644
+{txt}{col 49}F({res} 125{txt},{res}   4107{txt}){col 67}= {res}   2400.92
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.9723
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.9720
+{txt}{col 49}Root MSE{col 67}= {res}    0.3107
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}  lognprints{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2} .6270969{col 26}{space 2} .0012811{col 37}{space 1}  489.49{col 46}{space 3}0.000{col 54}{space 4} .6245852{col 67}{space 3} .6296086
+{txt}{space 12} {c |}
+{space 8}date {c |}
+{space 3}20190402  {c |}{col 14}{res}{space 2}-.0311287{col 26}{space 2} .0138585{col 37}{space 1}   -2.25{col 46}{space 3}0.025{col 54}{space 4}-.0582989{col 67}{space 3}-.0039586
+{txt}{space 3}20190403  {c |}{col 14}{res}{space 2}-.0360241{col 26}{space 2} .0120019{col 37}{space 1}   -3.00{col 46}{space 3}0.003{col 54}{space 4}-.0595543{col 67}{space 3}-.0124939
+{txt}{space 3}20190404  {c |}{col 14}{res}{space 2}-.0972816{col 26}{space 2}  .013985{col 37}{space 1}   -6.96{col 46}{space 3}0.000{col 54}{space 4}-.1246998{col 67}{space 3}-.0698633
+{txt}{space 3}20190405  {c |}{col 14}{res}{space 2}-.1194507{col 26}{space 2} .0142875{col 37}{space 1}   -8.36{col 46}{space 3}0.000{col 54}{space 4}-.1474619{col 67}{space 3}-.0914395
+{txt}{space 3}20190408  {c |}{col 14}{res}{space 2}-.0922476{col 26}{space 2}  .016098{col 37}{space 1}   -5.73{col 46}{space 3}0.000{col 54}{space 4}-.1238084{col 67}{space 3}-.0606868
+{txt}{space 3}20190409  {c |}{col 14}{res}{space 2}-.0602289{col 26}{space 2} .0138703{col 37}{space 1}   -4.34{col 46}{space 3}0.000{col 54}{space 4}-.0874222{col 67}{space 3}-.0330356
+{txt}{space 3}20190410  {c |}{col 14}{res}{space 2}-.0794829{col 26}{space 2} .0129894{col 37}{space 1}   -6.12{col 46}{space 3}0.000{col 54}{space 4}-.1049492{col 67}{space 3}-.0540166
+{txt}{space 3}20190411  {c |}{col 14}{res}{space 2}-.0622702{col 26}{space 2} .0134634{col 37}{space 1}   -4.63{col 46}{space 3}0.000{col 54}{space 4}-.0886658{col 67}{space 3}-.0358746
+{txt}{space 3}20190412  {c |}{col 14}{res}{space 2}-.1003971{col 26}{space 2} .0139448{col 37}{space 1}   -7.20{col 46}{space 3}0.000{col 54}{space 4}-.1277365{col 67}{space 3}-.0730577
+{txt}{space 3}20190415  {c |}{col 14}{res}{space 2}-.0512331{col 26}{space 2}   .01276{col 37}{space 1}   -4.02{col 46}{space 3}0.000{col 54}{space 4}-.0762497{col 67}{space 3}-.0262165
+{txt}{space 3}20190416  {c |}{col 14}{res}{space 2}-.0728573{col 26}{space 2} .0149152{col 37}{space 1}   -4.88{col 46}{space 3}0.000{col 54}{space 4}-.1020991{col 67}{space 3}-.0436155
+{txt}{space 3}20190418  {c |}{col 14}{res}{space 2}-.0110113{col 26}{space 2} .0121347{col 37}{space 1}   -0.91{col 46}{space 3}0.364{col 54}{space 4}-.0348019{col 67}{space 3} .0127793
+{txt}{space 3}20190422  {c |}{col 14}{res}{space 2}-.0861836{col 26}{space 2} .0137899{col 37}{space 1}   -6.25{col 46}{space 3}0.000{col 54}{space 4}-.1132193{col 67}{space 3}-.0591479
+{txt}{space 3}20190423  {c |}{col 14}{res}{space 2}-.0329736{col 26}{space 2} .0122151{col 37}{space 1}   -2.70{col 46}{space 3}0.007{col 54}{space 4}-.0569219{col 67}{space 3}-.0090254
+{txt}{space 3}20190424  {c |}{col 14}{res}{space 2} .0692107{col 26}{space 2} .0102048{col 37}{space 1}    6.78{col 46}{space 3}0.000{col 54}{space 4} .0492037{col 67}{space 3} .0892177
+{txt}{space 3}20190425  {c |}{col 14}{res}{space 2}-.0185427{col 26}{space 2} .0127816{col 37}{space 1}   -1.45{col 46}{space 3}0.147{col 54}{space 4}-.0436015{col 67}{space 3} .0065161
+{txt}{space 3}20190426  {c |}{col 14}{res}{space 2} .0460672{col 26}{space 2} .0120529{col 37}{space 1}    3.82{col 46}{space 3}0.000{col 54}{space 4}  .022437{col 67}{space 3} .0696974
+{txt}{space 3}20190507  {c |}{col 14}{res}{space 2} .2691201{col 26}{space 2} .0150988{col 37}{space 1}   17.82{col 46}{space 3}0.000{col 54}{space 4} .2395183{col 67}{space 3} .2987218
+{txt}{space 3}20190508  {c |}{col 14}{res}{space 2} .2264216{col 26}{space 2}  .010603{col 37}{space 1}   21.35{col 46}{space 3}0.000{col 54}{space 4}  .205634{col 67}{space 3} .2472091
+{txt}{space 3}20190509  {c |}{col 14}{res}{space 2} .2642321{col 26}{space 2} .0120995{col 37}{space 1}   21.84{col 46}{space 3}0.000{col 54}{space 4} .2405105{col 67}{space 3} .2879536
+{txt}{space 3}20190510  {c |}{col 14}{res}{space 2} .2858463{col 26}{space 2} .0115154{col 37}{space 1}   24.82{col 46}{space 3}0.000{col 54}{space 4} .2632698{col 67}{space 3} .3084227
+{txt}{space 3}20190513  {c |}{col 14}{res}{space 2} .2278467{col 26}{space 2}  .010058{col 37}{space 1}   22.65{col 46}{space 3}0.000{col 54}{space 4} .2081275{col 67}{space 3} .2475659
+{txt}{space 3}20190514  {c |}{col 14}{res}{space 2} .2586477{col 26}{space 2} .0107737{col 37}{space 1}   24.01{col 46}{space 3}0.000{col 54}{space 4} .2375254{col 67}{space 3} .2797699
+{txt}{space 3}20190515  {c |}{col 14}{res}{space 2} .2134215{col 26}{space 2} .0123457{col 37}{space 1}   17.29{col 46}{space 3}0.000{col 54}{space 4} .1892173{col 67}{space 3} .2376257
+{txt}{space 3}20190516  {c |}{col 14}{res}{space 2} .1083181{col 26}{space 2} .0110992{col 37}{space 1}    9.76{col 46}{space 3}0.000{col 54}{space 4} .0865575{col 67}{space 3} .1300786
+{txt}{space 3}20190517  {c |}{col 14}{res}{space 2} .1070647{col 26}{space 2} .0106002{col 37}{space 1}   10.10{col 46}{space 3}0.000{col 54}{space 4} .0862826{col 67}{space 3} .1278469
+{txt}{space 3}20190520  {c |}{col 14}{res}{space 2} .0677771{col 26}{space 2} .0113376{col 37}{space 1}    5.98{col 46}{space 3}0.000{col 54}{space 4} .0455493{col 67}{space 3} .0900049
+{txt}{space 3}20190521  {c |}{col 14}{res}{space 2} .0768935{col 26}{space 2} .0113903{col 37}{space 1}    6.75{col 46}{space 3}0.000{col 54}{space 4} .0545624{col 67}{space 3} .0992246
+{txt}{space 3}20190522  {c |}{col 14}{res}{space 2} .0140337{col 26}{space 2} .0107078{col 37}{space 1}    1.31{col 46}{space 3}0.190{col 54}{space 4}-.0069594{col 67}{space 3} .0350268
+{txt}{space 3}20190523  {c |}{col 14}{res}{space 2} .0624136{col 26}{space 2} .0116429{col 37}{space 1}    5.36{col 46}{space 3}0.000{col 54}{space 4} .0395873{col 67}{space 3} .0852399
+{txt}{space 3}20190524  {c |}{col 14}{res}{space 2} .0165663{col 26}{space 2} .0123864{col 37}{space 1}    1.34{col 46}{space 3}0.181{col 54}{space 4}-.0077177{col 67}{space 3} .0408503
+{txt}{space 3}20190529  {c |}{col 14}{res}{space 2} .0390775{col 26}{space 2} .0169853{col 37}{space 1}    2.30{col 46}{space 3}0.021{col 54}{space 4} .0057772{col 67}{space 3} .0723779
+{txt}{space 3}20190530  {c |}{col 14}{res}{space 2}-.0137093{col 26}{space 2} .0129153{col 37}{space 1}   -1.06{col 46}{space 3}0.289{col 54}{space 4}-.0390303{col 67}{space 3} .0116116
+{txt}{space 3}20190531  {c |}{col 14}{res}{space 2}-.0278502{col 26}{space 2} .0114447{col 37}{space 1}   -2.43{col 46}{space 3}0.015{col 54}{space 4}-.0502879{col 67}{space 3}-.0054125
+{txt}{space 3}20190603  {c |}{col 14}{res}{space 2}-.0002402{col 26}{space 2} .0101418{col 37}{space 1}   -0.02{col 46}{space 3}0.981{col 54}{space 4}-.0201236{col 67}{space 3} .0196431
+{txt}{space 3}20190604  {c |}{col 14}{res}{space 2}  .003157{col 26}{space 2}  .010372{col 37}{space 1}    0.30{col 46}{space 3}0.761{col 54}{space 4}-.0171778{col 67}{space 3} .0234918
+{txt}{space 3}20190605  {c |}{col 14}{res}{space 2} .0330806{col 26}{space 2} .0147801{col 37}{space 1}    2.24{col 46}{space 3}0.025{col 54}{space 4} .0041035{col 67}{space 3} .0620577
+{txt}{space 3}20190606  {c |}{col 14}{res}{space 2}-.0907285{col 26}{space 2} .0112933{col 37}{space 1}   -8.03{col 46}{space 3}0.000{col 54}{space 4}-.1128695{col 67}{space 3}-.0685876
+{txt}{space 3}20190610  {c |}{col 14}{res}{space 2}-.0731225{col 26}{space 2} .0116097{col 37}{space 1}   -6.30{col 46}{space 3}0.000{col 54}{space 4}-.0958837{col 67}{space 3}-.0503613
+{txt}{space 3}20190611  {c |}{col 14}{res}{space 2}-.0356875{col 26}{space 2} .0133446{col 37}{space 1}   -2.67{col 46}{space 3}0.008{col 54}{space 4}-.0618502{col 67}{space 3}-.0095248
+{txt}{space 3}20190612  {c |}{col 14}{res}{space 2} -.056652{col 26}{space 2} .0121003{col 37}{space 1}   -4.68{col 46}{space 3}0.000{col 54}{space 4}-.0803752{col 67}{space 3}-.0329289
+{txt}{space 3}20190614  {c |}{col 14}{res}{space 2}-.0975313{col 26}{space 2}  .010766{col 37}{space 1}   -9.06{col 46}{space 3}0.000{col 54}{space 4}-.1186385{col 67}{space 3} -.076424
+{txt}{space 3}20190618  {c |}{col 14}{res}{space 2} .0763018{col 26}{space 2} .0108607{col 37}{space 1}    7.03{col 46}{space 3}0.000{col 54}{space 4} .0550091{col 67}{space 3} .0975946
+{txt}{space 3}20190620  {c |}{col 14}{res}{space 2} .0171764{col 26}{space 2} .0108927{col 37}{space 1}    1.58{col 46}{space 3}0.115{col 54}{space 4}-.0041791{col 67}{space 3} .0385319
+{txt}{space 3}20190621  {c |}{col 14}{res}{space 2} .0081038{col 26}{space 2}  .011493{col 37}{space 1}    0.71{col 46}{space 3}0.481{col 54}{space 4}-.0144288{col 67}{space 3} .0306364
+{txt}{space 3}20190624  {c |}{col 14}{res}{space 2}-.0048237{col 26}{space 2} .0098965{col 37}{space 1}   -0.49{col 46}{space 3}0.626{col 54}{space 4}-.0242261{col 67}{space 3} .0145788
+{txt}{space 3}20190625  {c |}{col 14}{res}{space 2}-.0169109{col 26}{space 2} .0093264{col 37}{space 1}   -1.81{col 46}{space 3}0.070{col 54}{space 4}-.0351958{col 67}{space 3} .0013739
+{txt}{space 3}20190626  {c |}{col 14}{res}{space 2} -.000793{col 26}{space 2} .0097964{col 37}{space 1}   -0.08{col 46}{space 3}0.935{col 54}{space 4}-.0199993{col 67}{space 3} .0184133
+{txt}{space 3}20190627  {c |}{col 14}{res}{space 2} .0050206{col 26}{space 2} .0108198{col 37}{space 1}    0.46{col 46}{space 3}0.643{col 54}{space 4}-.0161921{col 67}{space 3} .0262332
+{txt}{space 3}20190628  {c |}{col 14}{res}{space 2} -.014965{col 26}{space 2} .0116187{col 37}{space 1}   -1.29{col 46}{space 3}0.198{col 54}{space 4}-.0377439{col 67}{space 3} .0078138
+{txt}{space 3}20190701  {c |}{col 14}{res}{space 2} .0543961{col 26}{space 2} .0112856{col 37}{space 1}    4.82{col 46}{space 3}0.000{col 54}{space 4} .0322702{col 67}{space 3} .0765221
+{txt}{space 3}20190702  {c |}{col 14}{res}{space 2} .0299281{col 26}{space 2} .0093751{col 37}{space 1}    3.19{col 46}{space 3}0.001{col 54}{space 4} .0115479{col 67}{space 3} .0483083
+{txt}{space 3}20190703  {c |}{col 14}{res}{space 2} .0734649{col 26}{space 2}  .011463{col 37}{space 1}    6.41{col 46}{space 3}0.000{col 54}{space 4} .0509911{col 67}{space 3} .0959387
+{txt}{space 3}20190704  {c |}{col 14}{res}{space 2}  .065232{col 26}{space 2} .0122152{col 37}{space 1}    5.34{col 46}{space 3}0.000{col 54}{space 4} .0412835{col 67}{space 3} .0891805
+{txt}{space 3}20190708  {c |}{col 14}{res}{space 2} .0341423{col 26}{space 2} .0104877{col 37}{space 1}    3.26{col 46}{space 3}0.001{col 54}{space 4} .0135806{col 67}{space 3}  .054704
+{txt}{space 3}20190709  {c |}{col 14}{res}{space 2} .0789397{col 26}{space 2} .0106354{col 37}{space 1}    7.42{col 46}{space 3}0.000{col 54}{space 4} .0580886{col 67}{space 3} .0997909
+{txt}{space 3}20190710  {c |}{col 14}{res}{space 2} .0027184{col 26}{space 2} .0117988{col 37}{space 1}    0.23{col 46}{space 3}0.818{col 54}{space 4}-.0204136{col 67}{space 3} .0258505
+{txt}{space 3}20190711  {c |}{col 14}{res}{space 2} .0316124{col 26}{space 2} .0109713{col 37}{space 1}    2.88{col 46}{space 3}0.004{col 54}{space 4} .0101027{col 67}{space 3} .0531221
+{txt}{space 3}20190712  {c |}{col 14}{res}{space 2} .0775776{col 26}{space 2} .0097258{col 37}{space 1}    7.98{col 46}{space 3}0.000{col 54}{space 4} .0585097{col 67}{space 3} .0966455
+{txt}{space 3}20190716  {c |}{col 14}{res}{space 2} .0889398{col 26}{space 2} .0125268{col 37}{space 1}    7.10{col 46}{space 3}0.000{col 54}{space 4} .0643804{col 67}{space 3} .1134992
+{txt}{space 3}20190717  {c |}{col 14}{res}{space 2} .1658603{col 26}{space 2} .0110375{col 37}{space 1}   15.03{col 46}{space 3}0.000{col 54}{space 4} .1442208{col 67}{space 3} .1874998
+{txt}{space 3}20190718  {c |}{col 14}{res}{space 2}  .189786{col 26}{space 2} .0109114{col 37}{space 1}   17.39{col 46}{space 3}0.000{col 54}{space 4} .1683937{col 67}{space 3} .2111783
+{txt}{space 3}20190719  {c |}{col 14}{res}{space 2} .1148581{col 26}{space 2} .0097632{col 37}{space 1}   11.76{col 46}{space 3}0.000{col 54}{space 4} .0957168{col 67}{space 3} .1339993
+{txt}{space 3}20190722  {c |}{col 14}{res}{space 2} .0255308{col 26}{space 2} .0110382{col 37}{space 1}    2.31{col 46}{space 3}0.021{col 54}{space 4} .0038899{col 67}{space 3} .0471717
+{txt}{space 3}20190723  {c |}{col 14}{res}{space 2} .0540007{col 26}{space 2} .0094357{col 37}{space 1}    5.72{col 46}{space 3}0.000{col 54}{space 4} .0355017{col 67}{space 3} .0724997
+{txt}{space 3}20190724  {c |}{col 14}{res}{space 2} .0252165{col 26}{space 2} .0099322{col 37}{space 1}    2.54{col 46}{space 3}0.011{col 54}{space 4}  .005744{col 67}{space 3} .0446891
+{txt}{space 3}20190725  {c |}{col 14}{res}{space 2} .0007598{col 26}{space 2} .0110083{col 37}{space 1}    0.07{col 46}{space 3}0.945{col 54}{space 4}-.0208225{col 67}{space 3} .0223421
+{txt}{space 3}20190726  {c |}{col 14}{res}{space 2} .0213704{col 26}{space 2} .0119391{col 37}{space 1}    1.79{col 46}{space 3}0.074{col 54}{space 4}-.0020367{col 67}{space 3} .0447776
+{txt}{space 3}20190729  {c |}{col 14}{res}{space 2} .0384188{col 26}{space 2} .0117459{col 37}{space 1}    3.27{col 46}{space 3}0.001{col 54}{space 4} .0153905{col 67}{space 3} .0614471
+{txt}{space 3}20190730  {c |}{col 14}{res}{space 2}  .063617{col 26}{space 2} .0139622{col 37}{space 1}    4.56{col 46}{space 3}0.000{col 54}{space 4} .0362436{col 67}{space 3} .0909904
+{txt}{space 3}20190731  {c |}{col 14}{res}{space 2} .1172617{col 26}{space 2} .0131596{col 37}{space 1}    8.91{col 46}{space 3}0.000{col 54}{space 4} .0914618{col 67}{space 3} .1430615
+{txt}{space 3}20190801  {c |}{col 14}{res}{space 2} .0985545{col 26}{space 2} .0130138{col 37}{space 1}    7.57{col 46}{space 3}0.000{col 54}{space 4} .0730404{col 67}{space 3} .1240686
+{txt}{space 3}20190802  {c |}{col 14}{res}{space 2}  .203846{col 26}{space 2} .0132352{col 37}{space 1}   15.40{col 46}{space 3}0.000{col 54}{space 4} .1778979{col 67}{space 3} .2297941
+{txt}{space 3}20190806  {c |}{col 14}{res}{space 2}  .144284{col 26}{space 2} .0101247{col 37}{space 1}   14.25{col 46}{space 3}0.000{col 54}{space 4} .1244341{col 67}{space 3} .1641339
+{txt}{space 3}20190807  {c |}{col 14}{res}{space 2}  .039818{col 26}{space 2}  .013305{col 37}{space 1}    2.99{col 46}{space 3}0.003{col 54}{space 4} .0137329{col 67}{space 3}  .065903
+{txt}{space 3}20190808  {c |}{col 14}{res}{space 2} .0689196{col 26}{space 2} .0130759{col 37}{space 1}    5.27{col 46}{space 3}0.000{col 54}{space 4} .0432838{col 67}{space 3} .0945555
+{txt}{space 3}20190809  {c |}{col 14}{res}{space 2} .0121465{col 26}{space 2} .0129642{col 37}{space 1}    0.94{col 46}{space 3}0.349{col 54}{space 4}-.0132704{col 67}{space 3} .0375633
+{txt}{space 3}20190813  {c |}{col 14}{res}{space 2} .0630762{col 26}{space 2} .0099058{col 37}{space 1}    6.37{col 46}{space 3}0.000{col 54}{space 4} .0436556{col 67}{space 3} .0824969
+{txt}{space 3}20190814  {c |}{col 14}{res}{space 2} .0128525{col 26}{space 2} .0105953{col 37}{space 1}    1.21{col 46}{space 3}0.225{col 54}{space 4}-.0079201{col 67}{space 3} .0336252
+{txt}{space 3}20190816  {c |}{col 14}{res}{space 2} .0194504{col 26}{space 2}  .010775{col 37}{space 1}    1.81{col 46}{space 3}0.071{col 54}{space 4}-.0016743{col 67}{space 3} .0405752
+{txt}{space 3}20190819  {c |}{col 14}{res}{space 2} .0020994{col 26}{space 2} .0106335{col 37}{space 1}    0.20{col 46}{space 3}0.843{col 54}{space 4} -.018748{col 67}{space 3} .0229467
+{txt}{space 3}20190820  {c |}{col 14}{res}{space 2}-.0348224{col 26}{space 2} .0116276{col 37}{space 1}   -2.99{col 46}{space 3}0.003{col 54}{space 4}-.0576188{col 67}{space 3}-.0120261
+{txt}{space 3}20190821  {c |}{col 14}{res}{space 2}-.0629932{col 26}{space 2} .0118838{col 37}{space 1}   -5.30{col 46}{space 3}0.000{col 54}{space 4}-.0862918{col 67}{space 3}-.0396946
+{txt}{space 3}20190822  {c |}{col 14}{res}{space 2} -.024304{col 26}{space 2}  .011034{col 37}{space 1}   -2.20{col 46}{space 3}0.028{col 54}{space 4}-.0459366{col 67}{space 3}-.0026713
+{txt}{space 3}20190823  {c |}{col 14}{res}{space 2}-.0534256{col 26}{space 2} .0119309{col 37}{space 1}   -4.48{col 46}{space 3}0.000{col 54}{space 4}-.0768167{col 67}{space 3}-.0300345
+{txt}{space 3}20190826  {c |}{col 14}{res}{space 2}-.0029732{col 26}{space 2} .0109809{col 37}{space 1}   -0.27{col 46}{space 3}0.787{col 54}{space 4}-.0245017{col 67}{space 3} .0185553
+{txt}{space 3}20190827  {c |}{col 14}{res}{space 2}-.0372316{col 26}{space 2} .0117833{col 37}{space 1}   -3.16{col 46}{space 3}0.002{col 54}{space 4}-.0603332{col 67}{space 3}-.0141299
+{txt}{space 3}20190828  {c |}{col 14}{res}{space 2}-.0456721{col 26}{space 2}  .011422{col 37}{space 1}   -4.00{col 46}{space 3}0.000{col 54}{space 4}-.0680654{col 67}{space 3}-.0232789
+{txt}{space 3}20190829  {c |}{col 14}{res}{space 2}-.0202631{col 26}{space 2} .0110594{col 37}{space 1}   -1.83{col 46}{space 3}0.067{col 54}{space 4}-.0419455{col 67}{space 3} .0014193
+{txt}{space 3}20190830  {c |}{col 14}{res}{space 2}-.0328526{col 26}{space 2} .0113257{col 37}{space 1}   -2.90{col 46}{space 3}0.004{col 54}{space 4}-.0550572{col 67}{space 3}-.0106481
+{txt}{space 3}20190903  {c |}{col 14}{res}{space 2}-.0216883{col 26}{space 2} .0112803{col 37}{space 1}   -1.92{col 46}{space 3}0.055{col 54}{space 4}-.0438037{col 67}{space 3} .0004272
+{txt}{space 3}20190904  {c |}{col 14}{res}{space 2}-.0055207{col 26}{space 2} .0132107{col 37}{space 1}   -0.42{col 46}{space 3}0.676{col 54}{space 4}-.0314208{col 67}{space 3} .0203793
+{txt}{space 3}20190905  {c |}{col 14}{res}{space 2} .0945577{col 26}{space 2} .0133602{col 37}{space 1}    7.08{col 46}{space 3}0.000{col 54}{space 4} .0683645{col 67}{space 3} .1207508
+{txt}{space 3}20190906  {c |}{col 14}{res}{space 2} .0076501{col 26}{space 2} .0116594{col 37}{space 1}    0.66{col 46}{space 3}0.512{col 54}{space 4}-.0152087{col 67}{space 3} .0305088
+{txt}{space 3}20190909  {c |}{col 14}{res}{space 2}-.0109836{col 26}{space 2} .0110289{col 37}{space 1}   -1.00{col 46}{space 3}0.319{col 54}{space 4}-.0326063{col 67}{space 3} .0106391
+{txt}{space 3}20190910  {c |}{col 14}{res}{space 2} .0589267{col 26}{space 2} .0109864{col 37}{space 1}    5.36{col 46}{space 3}0.000{col 54}{space 4} .0373874{col 67}{space 3} .0804659
+{txt}{space 3}20190911  {c |}{col 14}{res}{space 2} .1120867{col 26}{space 2} .0116255{col 37}{space 1}    9.64{col 46}{space 3}0.000{col 54}{space 4} .0892945{col 67}{space 3} .1348789
+{txt}{space 3}20190912  {c |}{col 14}{res}{space 2} .0294148{col 26}{space 2} .0105299{col 37}{space 1}    2.79{col 46}{space 3}0.005{col 54}{space 4} .0087705{col 67}{space 3} .0500591
+{txt}{space 3}20190913  {c |}{col 14}{res}{space 2}-.1032551{col 26}{space 2} .0118486{col 37}{space 1}   -8.71{col 46}{space 3}0.000{col 54}{space 4}-.1264848{col 67}{space 3}-.0800254
+{txt}{space 3}20190917  {c |}{col 14}{res}{space 2} .0646091{col 26}{space 2} .0111161{col 37}{space 1}    5.81{col 46}{space 3}0.000{col 54}{space 4} .0428155{col 67}{space 3} .0864026
+{txt}{space 3}20190918  {c |}{col 14}{res}{space 2} .0910986{col 26}{space 2} .0113041{col 37}{space 1}    8.06{col 46}{space 3}0.000{col 54}{space 4} .0689365{col 67}{space 3} .1132607
+{txt}{space 3}20190919  {c |}{col 14}{res}{space 2} .0893637{col 26}{space 2} .0107779{col 37}{space 1}    8.29{col 46}{space 3}0.000{col 54}{space 4} .0682333{col 67}{space 3} .1104942
+{txt}{space 3}20190920  {c |}{col 14}{res}{space 2}-.0081868{col 26}{space 2} .0139304{col 37}{space 1}   -0.59{col 46}{space 3}0.557{col 54}{space 4} -.035498{col 67}{space 3} .0191244
+{txt}{space 3}20190924  {c |}{col 14}{res}{space 2} .0787485{col 26}{space 2} .0115436{col 37}{space 1}    6.82{col 46}{space 3}0.000{col 54}{space 4} .0561167{col 67}{space 3} .1013803
+{txt}{space 3}20190925  {c |}{col 14}{res}{space 2}  .029213{col 26}{space 2} .0121121{col 37}{space 1}    2.41{col 46}{space 3}0.016{col 54}{space 4} .0054668{col 67}{space 3} .0529593
+{txt}{space 3}20190926  {c |}{col 14}{res}{space 2} .0662525{col 26}{space 2} .0104218{col 37}{space 1}    6.36{col 46}{space 3}0.000{col 54}{space 4} .0458201{col 67}{space 3} .0866849
+{txt}{space 3}20190927  {c |}{col 14}{res}{space 2} .1384148{col 26}{space 2}    .0105{col 37}{space 1}   13.18{col 46}{space 3}0.000{col 54}{space 4} .1178291{col 67}{space 3} .1590004
+{txt}{space 3}20191001  {c |}{col 14}{res}{space 2}  .097695{col 26}{space 2} .0100516{col 37}{space 1}    9.72{col 46}{space 3}0.000{col 54}{space 4} .0779885{col 67}{space 3} .1174015
+{txt}{space 3}20191002  {c |}{col 14}{res}{space 2} .1209529{col 26}{space 2} .0102465{col 37}{space 1}   11.80{col 46}{space 3}0.000{col 54}{space 4} .1008642{col 67}{space 3} .1410416
+{txt}{space 3}20191004  {c |}{col 14}{res}{space 2} .0552216{col 26}{space 2} .0125744{col 37}{space 1}    4.39{col 46}{space 3}0.000{col 54}{space 4} .0305691{col 67}{space 3} .0798742
+{txt}{space 3}20191007  {c |}{col 14}{res}{space 2} .0389411{col 26}{space 2} .0105647{col 37}{space 1}    3.69{col 46}{space 3}0.000{col 54}{space 4} .0182285{col 67}{space 3} .0596536
+{txt}{space 3}20191008  {c |}{col 14}{res}{space 2} .1205376{col 26}{space 2} .0104435{col 37}{space 1}   11.54{col 46}{space 3}0.000{col 54}{space 4} .1000627{col 67}{space 3} .1410125
+{txt}{space 3}20191009  {c |}{col 14}{res}{space 2} .0577306{col 26}{space 2} .0102901{col 37}{space 1}    5.61{col 46}{space 3}0.000{col 54}{space 4} .0375564{col 67}{space 3} .0779048
+{txt}{space 3}20191010  {c |}{col 14}{res}{space 2} .1042869{col 26}{space 2}  .010462{col 37}{space 1}    9.97{col 46}{space 3}0.000{col 54}{space 4} .0837757{col 67}{space 3} .1247981
+{txt}{space 3}20191015  {c |}{col 14}{res}{space 2} .1402331{col 26}{space 2} .0104947{col 37}{space 1}   13.36{col 46}{space 3}0.000{col 54}{space 4} .1196578{col 67}{space 3} .1608085
+{txt}{space 3}20191016  {c |}{col 14}{res}{space 2}  .124743{col 26}{space 2} .0109621{col 37}{space 1}   11.38{col 46}{space 3}0.000{col 54}{space 4} .1032512{col 67}{space 3} .1462347
+{txt}{space 3}20191017  {c |}{col 14}{res}{space 2}  .098364{col 26}{space 2}  .010857{col 37}{space 1}    9.06{col 46}{space 3}0.000{col 54}{space 4} .0770783{col 67}{space 3} .1196497
+{txt}{space 3}20191021  {c |}{col 14}{res}{space 2} .0225678{col 26}{space 2} .0115027{col 37}{space 1}    1.96{col 46}{space 3}0.050{col 54}{space 4} .0000163{col 67}{space 3} .0451193
+{txt}{space 3}20191023  {c |}{col 14}{res}{space 2} .1033484{col 26}{space 2} .0106454{col 37}{space 1}    9.71{col 46}{space 3}0.000{col 54}{space 4} .0824775{col 67}{space 3} .1242192
+{txt}{space 3}20191025  {c |}{col 14}{res}{space 2} .0879364{col 26}{space 2} .0105741{col 37}{space 1}    8.32{col 46}{space 3}0.000{col 54}{space 4} .0672054{col 67}{space 3} .1086675
+{txt}{space 3}20191028  {c |}{col 14}{res}{space 2} .1339663{col 26}{space 2} .0119888{col 37}{space 1}   11.17{col 46}{space 3}0.000{col 54}{space 4} .1104617{col 67}{space 3} .1574708
+{txt}{space 3}20191029  {c |}{col 14}{res}{space 2}  .158808{col 26}{space 2} .0119565{col 37}{space 1}   13.28{col 46}{space 3}0.000{col 54}{space 4} .1353667{col 67}{space 3} .1822492
+{txt}{space 3}20191030  {c |}{col 14}{res}{space 2} .1613922{col 26}{space 2} .0114368{col 37}{space 1}   14.11{col 46}{space 3}0.000{col 54}{space 4} .1389699{col 67}{space 3} .1838144
+{txt}{space 3}20191031  {c |}{col 14}{res}{space 2} .1910174{col 26}{space 2} .0114661{col 37}{space 1}   16.66{col 46}{space 3}0.000{col 54}{space 4} .1685377{col 67}{space 3} .2134972
+{txt}{space 12} {c |}
+{space 7}_cons {c |}{col 14}{res}{space 2} 5.057466{col 26}{space 2}  .007704{col 37}{space 1}  656.47{col 46}{space 3}0.000{col 54}{space 4} 5.042362{col 67}{space 3}  5.07257
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. outreg2 using table2.tex, append adjr2 ctitle("LSDV") keep(logw1dbw1) label addtext(Stock FE, YES, Day FE, YES) dec(3)
+{txt}{stata `"shellout using `"table2.tex"'"':table2.tex}
+{browse `"/media/guolewen/regular_files/guolewen/Market_invariance/JAPAN/pooled_results"' :dir}{com} : {txt}{stata `"seeout using "table2.txt", label"':seeout}
+
+{com}. *--------------------Fixed Effects (LSDV) for number of prints----------
+. * LSDV estimator, standard errors are clustered by both date and industry
+. * Volume-weighted dependent variable
+. areg logvwsize logw1dbw1, absorb(ticker) cluster(newgroup) // Stock FE -.4899378
+
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:ticker}{col 49}No. of categories{col 67}= {res}     2,644
+{txt}{col 49}F({res}   1{txt},{res}   4107{txt}){col 67}= {res}  12969.10
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.8577
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.8566
+{txt}{col 49}Root MSE{col 67}= {res}    0.6927
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}   logvwsize{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2}-.4899122{col 26}{space 2} .0043019{col 37}{space 1} -113.88{col 46}{space 3}0.000{col 54}{space 4}-.4983464{col 67}{space 3}-.4814781
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2}-4.554017{col 26}{space 2} .0040164{col 37}{space 1}-1133.85{col 46}{space 3}0.000{col 54}{space 4}-4.561891{col 67}{space 3}-4.546142
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. areg logvwsize logw1dbw1, absorb(date) cluster(newgroup) // Day FE -.6182569
+
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:date}{col 49}No. of categories{col 67}= {res}       125
+{txt}{col 49}F({res}   1{txt},{res}   4107{txt}){col 67}= {res} 335997.18
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.7784
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.7784
+{txt}{col 49}Root MSE{col 67}= {res}    0.8610
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}   logvwsize{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2}-.6183088{col 26}{space 2} .0010667{col 37}{space 1} -579.65{col 46}{space 3}0.000{col 54}{space 4}-.6204001{col 67}{space 3}-.6162175
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2}-4.548399{col 26}{space 2} .0026602{col 37}{space 1}-1709.79{col 46}{space 3}0.000{col 54}{space 4}-4.553615{col 67}{space 3}-4.543184
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. areg logvwsize logw1dbw1 i.date, absorb(ticker) cluster(newgroup) // two-way -.493899
+{res}
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:ticker}{col 49}No. of categories{col 67}= {res}     2,644
+{txt}{col 49}F({res} 125{txt},{res}   4107{txt}){col 67}= {res}    372.47
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.8673
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.8662
+{txt}{col 49}Root MSE{col 67}= {res}    0.6690
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}   logvwsize{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2}-.4938611{col 26}{space 2} .0034867{col 37}{space 1} -141.64{col 46}{space 3}0.000{col 54}{space 4}-.5006969{col 67}{space 3}-.4870252
+{txt}{space 12} {c |}
+{space 8}date {c |}
+{space 3}20190402  {c |}{col 14}{res}{space 2} .0446098{col 26}{space 2} .0214317{col 37}{space 1}    2.08{col 46}{space 3}0.037{col 54}{space 4}  .002592{col 67}{space 3} .0866277
+{txt}{space 3}20190403  {c |}{col 14}{res}{space 2}  .033149{col 26}{space 2} .0199469{col 37}{space 1}    1.66{col 46}{space 3}0.097{col 54}{space 4}-.0059577{col 67}{space 3} .0722557
+{txt}{space 3}20190404  {c |}{col 14}{res}{space 2} .1312768{col 26}{space 2} .0197585{col 37}{space 1}    6.64{col 46}{space 3}0.000{col 54}{space 4} .0925393{col 67}{space 3} .1700142
+{txt}{space 3}20190405  {c |}{col 14}{res}{space 2} .1793372{col 26}{space 2} .0199892{col 37}{space 1}    8.97{col 46}{space 3}0.000{col 54}{space 4} .1401475{col 67}{space 3} .2185269
+{txt}{space 3}20190408  {c |}{col 14}{res}{space 2} .1278623{col 26}{space 2} .0224388{col 37}{space 1}    5.70{col 46}{space 3}0.000{col 54}{space 4} .0838701{col 67}{space 3} .1718545
+{txt}{space 3}20190409  {c |}{col 14}{res}{space 2} .0703998{col 26}{space 2}  .020031{col 37}{space 1}    3.51{col 46}{space 3}0.000{col 54}{space 4} .0311282{col 67}{space 3} .1096715
+{txt}{space 3}20190410  {c |}{col 14}{res}{space 2} .1278162{col 26}{space 2} .0217709{col 37}{space 1}    5.87{col 46}{space 3}0.000{col 54}{space 4} .0851334{col 67}{space 3}  .170499
+{txt}{space 3}20190411  {c |}{col 14}{res}{space 2} .0635256{col 26}{space 2} .0230138{col 37}{space 1}    2.76{col 46}{space 3}0.006{col 54}{space 4}  .018406{col 67}{space 3} .1086452
+{txt}{space 3}20190412  {c |}{col 14}{res}{space 2}  .195276{col 26}{space 2} .0207901{col 37}{space 1}    9.39{col 46}{space 3}0.000{col 54}{space 4} .1545162{col 67}{space 3} .2360359
+{txt}{space 3}20190415  {c |}{col 14}{res}{space 2} .1186921{col 26}{space 2} .0171351{col 37}{space 1}    6.93{col 46}{space 3}0.000{col 54}{space 4} .0850981{col 67}{space 3} .1522861
+{txt}{space 3}20190416  {c |}{col 14}{res}{space 2} .0945205{col 26}{space 2} .0193657{col 37}{space 1}    4.88{col 46}{space 3}0.000{col 54}{space 4} .0565533{col 67}{space 3} .1324877
+{txt}{space 3}20190418  {c |}{col 14}{res}{space 2} .0142681{col 26}{space 2} .0166465{col 37}{space 1}    0.86{col 46}{space 3}0.391{col 54}{space 4} -.018368{col 67}{space 3} .0469042
+{txt}{space 3}20190422  {c |}{col 14}{res}{space 2}  .103406{col 26}{space 2} .0204507{col 37}{space 1}    5.06{col 46}{space 3}0.000{col 54}{space 4} .0633116{col 67}{space 3} .1435004
+{txt}{space 3}20190423  {c |}{col 14}{res}{space 2} .0651657{col 26}{space 2} .0169513{col 37}{space 1}    3.84{col 46}{space 3}0.000{col 54}{space 4}  .031932{col 67}{space 3} .0983994
+{txt}{space 3}20190424  {c |}{col 14}{res}{space 2}-.0615332{col 26}{space 2} .0169873{col 37}{space 1}   -3.62{col 46}{space 3}0.000{col 54}{space 4}-.0948376{col 67}{space 3}-.0282289
+{txt}{space 3}20190425  {c |}{col 14}{res}{space 2} .2704373{col 26}{space 2} .0323069{col 37}{space 1}    8.37{col 46}{space 3}0.000{col 54}{space 4} .2070983{col 67}{space 3} .3337764
+{txt}{space 3}20190426  {c |}{col 14}{res}{space 2} .0308936{col 26}{space 2}  .020349{col 37}{space 1}    1.52{col 46}{space 3}0.129{col 54}{space 4}-.0090015{col 67}{space 3} .0707886
+{txt}{space 3}20190507  {c |}{col 14}{res}{space 2}-.2168005{col 26}{space 2} .0249954{col 37}{space 1}   -8.67{col 46}{space 3}0.000{col 54}{space 4}-.2658052{col 67}{space 3}-.1677959
+{txt}{space 3}20190508  {c |}{col 14}{res}{space 2}-.1377158{col 26}{space 2} .0188664{col 37}{space 1}   -7.30{col 46}{space 3}0.000{col 54}{space 4}-.1747041{col 67}{space 3}-.1007275
+{txt}{space 3}20190509  {c |}{col 14}{res}{space 2}-.2273566{col 26}{space 2} .0203845{col 37}{space 1}  -11.15{col 46}{space 3}0.000{col 54}{space 4}-.2673211{col 67}{space 3} -.187392
+{txt}{space 3}20190510  {c |}{col 14}{res}{space 2}-.3236408{col 26}{space 2} .0200371{col 37}{space 1}  -16.15{col 46}{space 3}0.000{col 54}{space 4}-.3629243{col 67}{space 3}-.2843573
+{txt}{space 3}20190513  {c |}{col 14}{res}{space 2}-.2446702{col 26}{space 2} .0208608{col 37}{space 1}  -11.73{col 46}{space 3}0.000{col 54}{space 4}-.2855687{col 67}{space 3}-.2037717
+{txt}{space 3}20190514  {c |}{col 14}{res}{space 2}-.2818213{col 26}{space 2} .0189692{col 37}{space 1}  -14.86{col 46}{space 3}0.000{col 54}{space 4}-.3190111{col 67}{space 3}-.2446314
+{txt}{space 3}20190515  {c |}{col 14}{res}{space 2}-.2565554{col 26}{space 2}  .021653{col 37}{space 1}  -11.85{col 46}{space 3}0.000{col 54}{space 4} -.299007{col 67}{space 3}-.2141038
+{txt}{space 3}20190516  {c |}{col 14}{res}{space 2}-.1031229{col 26}{space 2} .0185628{col 37}{space 1}   -5.56{col 46}{space 3}0.000{col 54}{space 4} -.139516{col 67}{space 3}-.0667298
+{txt}{space 3}20190517  {c |}{col 14}{res}{space 2}-.0936619{col 26}{space 2} .0162012{col 37}{space 1}   -5.78{col 46}{space 3}0.000{col 54}{space 4}-.1254249{col 67}{space 3}-.0618988
+{txt}{space 3}20190520  {c |}{col 14}{res}{space 2}-.0579957{col 26}{space 2} .0190023{col 37}{space 1}   -3.05{col 46}{space 3}0.002{col 54}{space 4}-.0952505{col 67}{space 3}-.0207409
+{txt}{space 3}20190521  {c |}{col 14}{res}{space 2}-.0896377{col 26}{space 2} .0218216{col 37}{space 1}   -4.11{col 46}{space 3}0.000{col 54}{space 4}-.1324198{col 67}{space 3}-.0468556
+{txt}{space 3}20190522  {c |}{col 14}{res}{space 2} .0127904{col 26}{space 2} .0178261{col 37}{space 1}    0.72{col 46}{space 3}0.473{col 54}{space 4}-.0221584{col 67}{space 3} .0477393
+{txt}{space 3}20190523  {c |}{col 14}{res}{space 2}-.0612227{col 26}{space 2} .0175359{col 37}{space 1}   -3.49{col 46}{space 3}0.000{col 54}{space 4}-.0956026{col 67}{space 3}-.0268428
+{txt}{space 3}20190524  {c |}{col 14}{res}{space 2} .0600959{col 26}{space 2} .0188292{col 37}{space 1}    3.19{col 46}{space 3}0.001{col 54}{space 4} .0231804{col 67}{space 3} .0970114
+{txt}{space 3}20190529  {c |}{col 14}{res}{space 2}-.0520022{col 26}{space 2} .0306532{col 37}{space 1}   -1.70{col 46}{space 3}0.090{col 54}{space 4}-.1120991{col 67}{space 3} .0080947
+{txt}{space 3}20190530  {c |}{col 14}{res}{space 2} .0247292{col 26}{space 2} .0205542{col 37}{space 1}    1.20{col 46}{space 3}0.229{col 54}{space 4}-.0155681{col 67}{space 3} .0650266
+{txt}{space 3}20190531  {c |}{col 14}{res}{space 2}  .064404{col 26}{space 2} .0180354{col 37}{space 1}    3.57{col 46}{space 3}0.000{col 54}{space 4} .0290449{col 67}{space 3} .0997632
+{txt}{space 3}20190603  {c |}{col 14}{res}{space 2} .0103046{col 26}{space 2} .0168443{col 37}{space 1}    0.61{col 46}{space 3}0.541{col 54}{space 4}-.0227192{col 67}{space 3} .0433285
+{txt}{space 3}20190604  {c |}{col 14}{res}{space 2} -.024631{col 26}{space 2} .0163044{col 37}{space 1}   -1.51{col 46}{space 3}0.131{col 54}{space 4}-.0565965{col 67}{space 3} .0073346
+{txt}{space 3}20190605  {c |}{col 14}{res}{space 2}-.0598593{col 26}{space 2} .0218872{col 37}{space 1}   -2.73{col 46}{space 3}0.006{col 54}{space 4}  -.10277{col 67}{space 3}-.0169485
+{txt}{space 3}20190606  {c |}{col 14}{res}{space 2}  .112781{col 26}{space 2} .0182656{col 37}{space 1}    6.17{col 46}{space 3}0.000{col 54}{space 4} .0769704{col 67}{space 3} .1485915
+{txt}{space 3}20190610  {c |}{col 14}{res}{space 2} .1566229{col 26}{space 2} .0226455{col 37}{space 1}    6.92{col 46}{space 3}0.000{col 54}{space 4} .1122253{col 67}{space 3} .2010204
+{txt}{space 3}20190611  {c |}{col 14}{res}{space 2} .1139751{col 26}{space 2} .0194568{col 37}{space 1}    5.86{col 46}{space 3}0.000{col 54}{space 4} .0758293{col 67}{space 3} .1521209
+{txt}{space 3}20190612  {c |}{col 14}{res}{space 2} .1632485{col 26}{space 2} .0210762{col 37}{space 1}    7.75{col 46}{space 3}0.000{col 54}{space 4} .1219278{col 67}{space 3} .2045692
+{txt}{space 3}20190614  {c |}{col 14}{res}{space 2} .5274547{col 26}{space 2} .0579041{col 37}{space 1}    9.11{col 46}{space 3}0.000{col 54}{space 4} .4139313{col 67}{space 3}  .640978
+{txt}{space 3}20190618  {c |}{col 14}{res}{space 2}-.0415169{col 26}{space 2} .0164089{col 37}{space 1}   -2.53{col 46}{space 3}0.011{col 54}{space 4}-.0736873{col 67}{space 3}-.0093465
+{txt}{space 3}20190620  {c |}{col 14}{res}{space 2} .0482465{col 26}{space 2} .0178098{col 37}{space 1}    2.71{col 46}{space 3}0.007{col 54}{space 4} .0133296{col 67}{space 3} .0831635
+{txt}{space 3}20190621  {c |}{col 14}{res}{space 2} .3836377{col 26}{space 2} .0347068{col 37}{space 1}   11.05{col 46}{space 3}0.000{col 54}{space 4} .3155936{col 67}{space 3} .4516817
+{txt}{space 3}20190624  {c |}{col 14}{res}{space 2}  .076602{col 26}{space 2} .0185801{col 37}{space 1}    4.12{col 46}{space 3}0.000{col 54}{space 4}  .040175{col 67}{space 3} .1130291
+{txt}{space 3}20190625  {c |}{col 14}{res}{space 2} .1723795{col 26}{space 2} .0215456{col 37}{space 1}    8.00{col 46}{space 3}0.000{col 54}{space 4} .1301385{col 67}{space 3} .2146205
+{txt}{space 3}20190626  {c |}{col 14}{res}{space 2} .1237536{col 26}{space 2} .0242466{col 37}{space 1}    5.10{col 46}{space 3}0.000{col 54}{space 4} .0762171{col 67}{space 3} .1712901
+{txt}{space 3}20190627  {c |}{col 14}{res}{space 2} .0853901{col 26}{space 2} .0188426{col 37}{space 1}    4.53{col 46}{space 3}0.000{col 54}{space 4} .0484483{col 67}{space 3} .1223319
+{txt}{space 3}20190628  {c |}{col 14}{res}{space 2} .1737363{col 26}{space 2} .0210642{col 37}{space 1}    8.25{col 46}{space 3}0.000{col 54}{space 4}  .132439{col 67}{space 3} .2150335
+{txt}{space 3}20190701  {c |}{col 14}{res}{space 2} .0199321{col 26}{space 2} .0186667{col 37}{space 1}    1.07{col 46}{space 3}0.286{col 54}{space 4}-.0166648{col 67}{space 3} .0565289
+{txt}{space 3}20190702  {c |}{col 14}{res}{space 2} .0601618{col 26}{space 2} .0194077{col 37}{space 1}    3.10{col 46}{space 3}0.002{col 54}{space 4} .0221122{col 67}{space 3} .0982114
+{txt}{space 3}20190703  {c |}{col 14}{res}{space 2}-.0680411{col 26}{space 2} .0192616{col 37}{space 1}   -3.53{col 46}{space 3}0.000{col 54}{space 4}-.1058042{col 67}{space 3} -.030278
+{txt}{space 3}20190704  {c |}{col 14}{res}{space 2}-.0369194{col 26}{space 2} .0210665{col 37}{space 1}   -1.75{col 46}{space 3}0.080{col 54}{space 4}-.0782212{col 67}{space 3} .0043824
+{txt}{space 3}20190708  {c |}{col 14}{res}{space 2} .0653977{col 26}{space 2} .0176692{col 37}{space 1}    3.70{col 46}{space 3}0.000{col 54}{space 4} .0307564{col 67}{space 3}  .100039
+{txt}{space 3}20190709  {c |}{col 14}{res}{space 2}-.0381731{col 26}{space 2} .0191983{col 37}{space 1}   -1.99{col 46}{space 3}0.047{col 54}{space 4}-.0758121{col 67}{space 3}-.0005341
+{txt}{space 3}20190710  {c |}{col 14}{res}{space 2} .2803282{col 26}{space 2} .0314023{col 37}{space 1}    8.93{col 46}{space 3}0.000{col 54}{space 4} .2187626{col 67}{space 3} .3418937
+{txt}{space 3}20190711  {c |}{col 14}{res}{space 2} .0696386{col 26}{space 2} .0209534{col 37}{space 1}    3.32{col 46}{space 3}0.001{col 54}{space 4} .0285586{col 67}{space 3} .1107186
+{txt}{space 3}20190712  {c |}{col 14}{res}{space 2} .0186663{col 26}{space 2} .0183114{col 37}{space 1}    1.02{col 46}{space 3}0.308{col 54}{space 4}-.0172339{col 67}{space 3} .0545665
+{txt}{space 3}20190716  {c |}{col 14}{res}{space 2}-.0205275{col 26}{space 2} .0224205{col 37}{space 1}   -0.92{col 46}{space 3}0.360{col 54}{space 4}-.0644837{col 67}{space 3} .0234288
+{txt}{space 3}20190717  {c |}{col 14}{res}{space 2}-.1746126{col 26}{space 2} .0211696{col 37}{space 1}   -8.25{col 46}{space 3}0.000{col 54}{space 4}-.2161165{col 67}{space 3}-.1331087
+{txt}{space 3}20190718  {c |}{col 14}{res}{space 2}-.1335727{col 26}{space 2} .0168702{col 37}{space 1}   -7.92{col 46}{space 3}0.000{col 54}{space 4}-.1666474{col 67}{space 3}-.1004979
+{txt}{space 3}20190719  {c |}{col 14}{res}{space 2}-.1008468{col 26}{space 2} .0168645{col 37}{space 1}   -5.98{col 46}{space 3}0.000{col 54}{space 4}-.1339104{col 67}{space 3}-.0677832
+{txt}{space 3}20190722  {c |}{col 14}{res}{space 2} .0738572{col 26}{space 2}  .018766{col 37}{space 1}    3.94{col 46}{space 3}0.000{col 54}{space 4} .0370657{col 67}{space 3} .1106487
+{txt}{space 3}20190723  {c |}{col 14}{res}{space 2}-.0283639{col 26}{space 2} .0164161{col 37}{space 1}   -1.73{col 46}{space 3}0.084{col 54}{space 4}-.0605484{col 67}{space 3} .0038207
+{txt}{space 3}20190724  {c |}{col 14}{res}{space 2} .0727206{col 26}{space 2} .0174964{col 37}{space 1}    4.16{col 46}{space 3}0.000{col 54}{space 4} .0384182{col 67}{space 3}  .107023
+{txt}{space 3}20190725  {c |}{col 14}{res}{space 2} .1445708{col 26}{space 2} .0231173{col 37}{space 1}    6.25{col 46}{space 3}0.000{col 54}{space 4} .0992484{col 67}{space 3} .1898933
+{txt}{space 3}20190726  {c |}{col 14}{res}{space 2} .0917005{col 26}{space 2} .0189084{col 37}{space 1}    4.85{col 46}{space 3}0.000{col 54}{space 4} .0546297{col 67}{space 3} .1287713
+{txt}{space 3}20190729  {c |}{col 14}{res}{space 2} .0506431{col 26}{space 2} .0239858{col 37}{space 1}    2.11{col 46}{space 3}0.035{col 54}{space 4}  .003618{col 67}{space 3} .0976682
+{txt}{space 3}20190730  {c |}{col 14}{res}{space 2} .2090633{col 26}{space 2} .0278001{col 37}{space 1}    7.52{col 46}{space 3}0.000{col 54}{space 4}   .15456{col 67}{space 3} .2635666
+{txt}{space 3}20190731  {c |}{col 14}{res}{space 2}-.0426465{col 26}{space 2} .0229982{col 37}{space 1}   -1.85{col 46}{space 3}0.064{col 54}{space 4}-.0877354{col 67}{space 3} .0024424
+{txt}{space 3}20190801  {c |}{col 14}{res}{space 2}-.0541758{col 26}{space 2} .0209548{col 37}{space 1}   -2.59{col 46}{space 3}0.010{col 54}{space 4}-.0952585{col 67}{space 3}-.0130931
+{txt}{space 3}20190802  {c |}{col 14}{res}{space 2}-.1763359{col 26}{space 2}  .020048{col 37}{space 1}   -8.80{col 46}{space 3}0.000{col 54}{space 4}-.2156409{col 67}{space 3}-.1370309
+{txt}{space 3}20190806  {c |}{col 14}{res}{space 2}-.1037331{col 26}{space 2} .0188434{col 37}{space 1}   -5.51{col 46}{space 3}0.000{col 54}{space 4}-.1406763{col 67}{space 3}-.0667899
+{txt}{space 3}20190807  {c |}{col 14}{res}{space 2} .0347889{col 26}{space 2} .0233222{col 37}{space 1}    1.49{col 46}{space 3}0.136{col 54}{space 4}-.0109352{col 67}{space 3}  .080513
+{txt}{space 3}20190808  {c |}{col 14}{res}{space 2}-.0501611{col 26}{space 2} .0318476{col 37}{space 1}   -1.58{col 46}{space 3}0.115{col 54}{space 4}-.1125997{col 67}{space 3} .0122774
+{txt}{space 3}20190809  {c |}{col 14}{res}{space 2} .1114258{col 26}{space 2} .0246725{col 37}{space 1}    4.52{col 46}{space 3}0.000{col 54}{space 4} .0630544{col 67}{space 3} .1597972
+{txt}{space 3}20190813  {c |}{col 14}{res}{space 2} .0330198{col 26}{space 2} .0269505{col 37}{space 1}    1.23{col 46}{space 3}0.221{col 54}{space 4}-.0198179{col 67}{space 3} .0858574
+{txt}{space 3}20190814  {c |}{col 14}{res}{space 2} .0425883{col 26}{space 2} .0176103{col 37}{space 1}    2.42{col 46}{space 3}0.016{col 54}{space 4} .0080626{col 67}{space 3} .0771139
+{txt}{space 3}20190816  {c |}{col 14}{res}{space 2} .0287127{col 26}{space 2} .0231697{col 37}{space 1}    1.24{col 46}{space 3}0.215{col 54}{space 4}-.0167125{col 67}{space 3} .0741379
+{txt}{space 3}20190819  {c |}{col 14}{res}{space 2}  .085351{col 26}{space 2} .0322357{col 37}{space 1}    2.65{col 46}{space 3}0.008{col 54}{space 4} .0221514{col 67}{space 3} .1485505
+{txt}{space 3}20190820  {c |}{col 14}{res}{space 2} .1347392{col 26}{space 2} .0195277{col 37}{space 1}    6.90{col 46}{space 3}0.000{col 54}{space 4} .0964544{col 67}{space 3}  .173024
+{txt}{space 3}20190821  {c |}{col 14}{res}{space 2} .1738844{col 26}{space 2} .0235192{col 37}{space 1}    7.39{col 46}{space 3}0.000{col 54}{space 4}  .127774{col 67}{space 3} .2199949
+{txt}{space 3}20190822  {c |}{col 14}{res}{space 2} .1156645{col 26}{space 2} .0242741{col 37}{space 1}    4.76{col 46}{space 3}0.000{col 54}{space 4} .0680742{col 67}{space 3} .1632548
+{txt}{space 3}20190823  {c |}{col 14}{res}{space 2} .1910745{col 26}{space 2} .0190559{col 37}{space 1}   10.03{col 46}{space 3}0.000{col 54}{space 4} .1537147{col 67}{space 3} .2284342
+{txt}{space 3}20190826  {c |}{col 14}{res}{space 2} .1646784{col 26}{space 2} .0239794{col 37}{space 1}    6.87{col 46}{space 3}0.000{col 54}{space 4} .1176658{col 67}{space 3} .2116909
+{txt}{space 3}20190827  {c |}{col 14}{res}{space 2} .1473712{col 26}{space 2} .0244752{col 37}{space 1}    6.02{col 46}{space 3}0.000{col 54}{space 4} .0993865{col 67}{space 3} .1953559
+{txt}{space 3}20190828  {c |}{col 14}{res}{space 2} .2260753{col 26}{space 2} .0441639{col 37}{space 1}    5.12{col 46}{space 3}0.000{col 54}{space 4} .1394901{col 67}{space 3} .3126604
+{txt}{space 3}20190829  {c |}{col 14}{res}{space 2} .2526377{col 26}{space 2}  .033549{col 37}{space 1}    7.53{col 46}{space 3}0.000{col 54}{space 4} .1868635{col 67}{space 3} .3184119
+{txt}{space 3}20190830  {c |}{col 14}{res}{space 2} .2069932{col 26}{space 2}  .016654{col 37}{space 1}   12.43{col 46}{space 3}0.000{col 54}{space 4} .1743423{col 67}{space 3} .2396442
+{txt}{space 3}20190903  {c |}{col 14}{res}{space 2} .1520368{col 26}{space 2} .0230581{col 37}{space 1}    6.59{col 46}{space 3}0.000{col 54}{space 4} .1068305{col 67}{space 3} .1972431
+{txt}{space 3}20190904  {c |}{col 14}{res}{space 2} .1637381{col 26}{space 2} .0182066{col 37}{space 1}    8.99{col 46}{space 3}0.000{col 54}{space 4} .1280432{col 67}{space 3} .1994329
+{txt}{space 3}20190905  {c |}{col 14}{res}{space 2} .0133125{col 26}{space 2} .0224921{col 37}{space 1}    0.59{col 46}{space 3}0.554{col 54}{space 4}-.0307842{col 67}{space 3} .0574093
+{txt}{space 3}20190906  {c |}{col 14}{res}{space 2} .1507897{col 26}{space 2} .0205347{col 37}{space 1}    7.34{col 46}{space 3}0.000{col 54}{space 4} .1105306{col 67}{space 3} .1910487
+{txt}{space 3}20190909  {c |}{col 14}{res}{space 2}  .213882{col 26}{space 2} .0217004{col 37}{space 1}    9.86{col 46}{space 3}0.000{col 54}{space 4} .1713374{col 67}{space 3} .2564266
+{txt}{space 3}20190910  {c |}{col 14}{res}{space 2} .0203016{col 26}{space 2}   .01983{col 37}{space 1}    1.02{col 46}{space 3}0.306{col 54}{space 4}-.0185761{col 67}{space 3} .0591792
+{txt}{space 3}20190911  {c |}{col 14}{res}{space 2}-.0240554{col 26}{space 2} .0207239{col 37}{space 1}   -1.16{col 46}{space 3}0.246{col 54}{space 4}-.0646855{col 67}{space 3} .0165747
+{txt}{space 3}20190912  {c |}{col 14}{res}{space 2}  .229833{col 26}{space 2} .0180524{col 37}{space 1}   12.73{col 46}{space 3}0.000{col 54}{space 4} .1944404{col 67}{space 3} .2652256
+{txt}{space 3}20190913  {c |}{col 14}{res}{space 2} 1.248245{col 26}{space 2} .0858941{col 37}{space 1}   14.53{col 46}{space 3}0.000{col 54}{space 4} 1.079846{col 67}{space 3} 1.416644
+{txt}{space 3}20190917  {c |}{col 14}{res}{space 2} .1189093{col 26}{space 2} .0207648{col 37}{space 1}    5.73{col 46}{space 3}0.000{col 54}{space 4}  .078199{col 67}{space 3} .1596196
+{txt}{space 3}20190918  {c |}{col 14}{res}{space 2} .0199198{col 26}{space 2} .0174523{col 37}{space 1}    1.14{col 46}{space 3}0.254{col 54}{space 4}-.0142962{col 67}{space 3} .0541359
+{txt}{space 3}20190919  {c |}{col 14}{res}{space 2} .0342108{col 26}{space 2}  .021675{col 37}{space 1}    1.58{col 46}{space 3}0.115{col 54}{space 4}-.0082839{col 67}{space 3} .0767056
+{txt}{space 3}20190920  {c |}{col 14}{res}{space 2} .4554307{col 26}{space 2} .0302299{col 37}{space 1}   15.07{col 46}{space 3}0.000{col 54}{space 4} .3961638{col 67}{space 3} .5146975
+{txt}{space 3}20190924  {c |}{col 14}{res}{space 2} .1442116{col 26}{space 2} .0250114{col 37}{space 1}    5.77{col 46}{space 3}0.000{col 54}{space 4} .0951756{col 67}{space 3} .1932475
+{txt}{space 3}20190925  {c |}{col 14}{res}{space 2}  .202762{col 26}{space 2} .0237011{col 37}{space 1}    8.55{col 46}{space 3}0.000{col 54}{space 4} .1562949{col 67}{space 3}  .249229
+{txt}{space 3}20190926  {c |}{col 14}{res}{space 2} .3325833{col 26}{space 2} .0429354{col 37}{space 1}    7.75{col 46}{space 3}0.000{col 54}{space 4} .2484066{col 67}{space 3} .4167599
+{txt}{space 3}20190927  {c |}{col 14}{res}{space 2}-.0084295{col 26}{space 2} .0260516{col 37}{space 1}   -0.32{col 46}{space 3}0.746{col 54}{space 4}-.0595048{col 67}{space 3} .0426458
+{txt}{space 3}20191001  {c |}{col 14}{res}{space 2} -.040545{col 26}{space 2} .0186631{col 37}{space 1}   -2.17{col 46}{space 3}0.030{col 54}{space 4}-.0771349{col 67}{space 3}-.0039551
+{txt}{space 3}20191002  {c |}{col 14}{res}{space 2}-.0791638{col 26}{space 2} .0196419{col 37}{space 1}   -4.03{col 46}{space 3}0.000{col 54}{space 4}-.1176725{col 67}{space 3} -.040655
+{txt}{space 3}20191004  {c |}{col 14}{res}{space 2} .0328246{col 26}{space 2} .0183133{col 37}{space 1}    1.79{col 46}{space 3}0.073{col 54}{space 4}-.0030794{col 67}{space 3} .0687285
+{txt}{space 3}20191007  {c |}{col 14}{res}{space 2} .0707638{col 26}{space 2} .0209648{col 37}{space 1}    3.38{col 46}{space 3}0.001{col 54}{space 4} .0296615{col 67}{space 3}  .111866
+{txt}{space 3}20191008  {c |}{col 14}{res}{space 2}-.0689467{col 26}{space 2} .0161572{col 37}{space 1}   -4.27{col 46}{space 3}0.000{col 54}{space 4}-.1006235{col 67}{space 3}-.0372699
+{txt}{space 3}20191009  {c |}{col 14}{res}{space 2}  .057262{col 26}{space 2} .0159075{col 37}{space 1}    3.60{col 46}{space 3}0.000{col 54}{space 4} .0260746{col 67}{space 3} .0884494
+{txt}{space 3}20191010  {c |}{col 14}{res}{space 2}-.0576009{col 26}{space 2} .0185921{col 37}{space 1}   -3.10{col 46}{space 3}0.002{col 54}{space 4}-.0940515{col 67}{space 3}-.0211503
+{txt}{space 3}20191015  {c |}{col 14}{res}{space 2}-.0177804{col 26}{space 2} .0208957{col 37}{space 1}   -0.85{col 46}{space 3}0.395{col 54}{space 4}-.0587474{col 67}{space 3} .0231866
+{txt}{space 3}20191016  {c |}{col 14}{res}{space 2}-.0441776{col 26}{space 2}  .020013{col 37}{space 1}   -2.21{col 46}{space 3}0.027{col 54}{space 4} -.083414{col 67}{space 3}-.0049413
+{txt}{space 3}20191017  {c |}{col 14}{res}{space 2}-.0175997{col 26}{space 2} .0197363{col 37}{space 1}   -0.89{col 46}{space 3}0.373{col 54}{space 4}-.0562936{col 67}{space 3} .0210943
+{txt}{space 3}20191021  {c |}{col 14}{res}{space 2} .1098016{col 26}{space 2} .0177308{col 37}{space 1}    6.19{col 46}{space 3}0.000{col 54}{space 4} .0750396{col 67}{space 3} .1445636
+{txt}{space 3}20191023  {c |}{col 14}{res}{space 2}-.0341059{col 26}{space 2} .0178872{col 37}{space 1}   -1.91{col 46}{space 3}0.057{col 54}{space 4}-.0691744{col 67}{space 3} .0009627
+{txt}{space 3}20191025  {c |}{col 14}{res}{space 2} .0652141{col 26}{space 2} .0187838{col 37}{space 1}    3.47{col 46}{space 3}0.001{col 54}{space 4} .0283876{col 67}{space 3} .1020405
+{txt}{space 3}20191028  {c |}{col 14}{res}{space 2}-.0306163{col 26}{space 2} .0200044{col 37}{space 1}   -1.53{col 46}{space 3}0.126{col 54}{space 4}-.0698358{col 67}{space 3} .0086032
+{txt}{space 3}20191029  {c |}{col 14}{res}{space 2}-.0233948{col 26}{space 2} .0177314{col 37}{space 1}   -1.32{col 46}{space 3}0.187{col 54}{space 4} -.058158{col 67}{space 3} .0113684
+{txt}{space 3}20191030  {c |}{col 14}{res}{space 2} .5432999{col 26}{space 2} .0525168{col 37}{space 1}   10.35{col 46}{space 3}0.000{col 54}{space 4} .4403385{col 67}{space 3} .6462612
+{txt}{space 3}20191031  {c |}{col 14}{res}{space 2}-.1397964{col 26}{space 2}  .020014{col 37}{space 1}   -6.98{col 46}{space 3}0.000{col 54}{space 4}-.1790347{col 67}{space 3}-.1005581
+{txt}{space 12} {c |}
+{space 7}_cons {c |}{col 14}{res}{space 2} -4.61479{col 26}{space 2} .0133286{col 37}{space 1} -346.23{col 46}{space 3}0.000{col 54}{space 4}-4.640921{col 67}{space 3}-4.588659
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. * Trade-weighted dependent variable
+. areg logtwsize logw1dbw1, absorb(ticker) cluster(newgroup) // Stock FE -.7224438
+
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:ticker}{col 49}No. of categories{col 67}= {res}     2,644
+{txt}{col 49}F({res}   1{txt},{res}   4107{txt}){col 67}= {res} 171891.98
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.9682
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.9679
+{txt}{col 49}Root MSE{col 67}= {res}    0.3702
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}   logtwsize{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2}-.7226445{col 26}{space 2}  .001743{col 37}{space 1} -414.60{col 46}{space 3}0.000{col 54}{space 4}-.7260617{col 67}{space 3}-.7192273
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2}-5.929654{col 26}{space 2} .0022737{col 37}{space 1}-2607.95{col 46}{space 3}0.000{col 54}{space 4}-5.934112{col 67}{space 3}-5.925197
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. areg logtwsize logw1dbw1, absorb(date) cluster(newgroup) // Day FE -.7491275 
+
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:date}{col 49}No. of categories{col 67}= {res}       125
+{txt}{col 49}F({res}   1{txt},{res}   4107{txt}){col 67}= {res} 555688.26
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.8898
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.8897
+{txt}{col 49}Root MSE{col 67}= {res}    0.6861
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}   logtwsize{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2}-.7491719{col 26}{space 2}  .001005{col 37}{space 1} -745.45{col 46}{space 3}0.000{col 54}{space 4}-.7511423{col 67}{space 3}-.7472016
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2}-5.928494{col 26}{space 2} .0029082{col 37}{space 1}-2038.56{col 46}{space 3}0.000{col 54}{space 4}-5.934196{col 67}{space 3}-5.922792
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. areg logtwsize logw1dbw1 i.date, absorb(ticker) cluster(newgroup) // two-way -.7156124
+{res}
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:ticker}{col 49}No. of categories{col 67}= {res}     2,644
+{txt}{col 49}F({res} 125{txt},{res}   4107{txt}){col 67}= {res}   1947.38
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.9703
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.9700
+{txt}{col 49}Root MSE{col 67}= {res}    0.3579
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}   logtwsize{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2} -.715857{col 26}{space 2} .0016084{col 37}{space 1} -445.08{col 46}{space 3}0.000{col 54}{space 4}-.7190103{col 67}{space 3}-.7127037
+{txt}{space 12} {c |}
+{space 8}date {c |}
+{space 3}20190402  {c |}{col 14}{res}{space 2} .0337839{col 26}{space 2} .0191927{col 37}{space 1}    1.76{col 46}{space 3}0.078{col 54}{space 4}-.0038443{col 67}{space 3}  .071412
+{txt}{space 3}20190403  {c |}{col 14}{res}{space 2} .0356984{col 26}{space 2} .0181389{col 37}{space 1}    1.97{col 46}{space 3}0.049{col 54}{space 4} .0001363{col 67}{space 3} .0712606
+{txt}{space 3}20190404  {c |}{col 14}{res}{space 2} .0990935{col 26}{space 2} .0183971{col 37}{space 1}    5.39{col 46}{space 3}0.000{col 54}{space 4} .0630252{col 67}{space 3} .1351619
+{txt}{space 3}20190405  {c |}{col 14}{res}{space 2} .0844128{col 26}{space 2} .0175581{col 37}{space 1}    4.81{col 46}{space 3}0.000{col 54}{space 4} .0499894{col 67}{space 3} .1188361
+{txt}{space 3}20190408  {c |}{col 14}{res}{space 2} .0835207{col 26}{space 2}   .01915{col 37}{space 1}    4.36{col 46}{space 3}0.000{col 54}{space 4} .0459764{col 67}{space 3}  .121065
+{txt}{space 3}20190409  {c |}{col 14}{res}{space 2} .0580963{col 26}{space 2} .0192667{col 37}{space 1}    3.02{col 46}{space 3}0.003{col 54}{space 4} .0203232{col 67}{space 3} .0958694
+{txt}{space 3}20190410  {c |}{col 14}{res}{space 2} .0736594{col 26}{space 2}  .018488{col 37}{space 1}    3.98{col 46}{space 3}0.000{col 54}{space 4} .0374128{col 67}{space 3} .1099059
+{txt}{space 3}20190411  {c |}{col 14}{res}{space 2} .0799043{col 26}{space 2} .0185302{col 37}{space 1}    4.31{col 46}{space 3}0.000{col 54}{space 4} .0435751{col 67}{space 3} .1162336
+{txt}{space 3}20190412  {c |}{col 14}{res}{space 2} .0751096{col 26}{space 2} .0171006{col 37}{space 1}    4.39{col 46}{space 3}0.000{col 54}{space 4} .0415831{col 67}{space 3} .1086361
+{txt}{space 3}20190415  {c |}{col 14}{res}{space 2} .0018459{col 26}{space 2} .0165161{col 37}{space 1}    0.11{col 46}{space 3}0.911{col 54}{space 4}-.0305346{col 67}{space 3} .0342264
+{txt}{space 3}20190416  {c |}{col 14}{res}{space 2} .0785664{col 26}{space 2} .0218588{col 37}{space 1}    3.59{col 46}{space 3}0.000{col 54}{space 4} .0357113{col 67}{space 3} .1214215
+{txt}{space 3}20190418  {c |}{col 14}{res}{space 2} .0241564{col 26}{space 2} .0184066{col 37}{space 1}    1.31{col 46}{space 3}0.189{col 54}{space 4}-.0119306{col 67}{space 3} .0602434
+{txt}{space 3}20190422  {c |}{col 14}{res}{space 2} .1123634{col 26}{space 2} .0179712{col 37}{space 1}    6.25{col 46}{space 3}0.000{col 54}{space 4} .0771301{col 67}{space 3} .1475966
+{txt}{space 3}20190423  {c |}{col 14}{res}{space 2} .0320351{col 26}{space 2} .0167101{col 37}{space 1}    1.92{col 46}{space 3}0.055{col 54}{space 4}-.0007258{col 67}{space 3}  .064796
+{txt}{space 3}20190424  {c |}{col 14}{res}{space 2} -.071696{col 26}{space 2}  .015108{col 37}{space 1}   -4.75{col 46}{space 3}0.000{col 54}{space 4}-.1013158{col 67}{space 3}-.0420762
+{txt}{space 3}20190425  {c |}{col 14}{res}{space 2}-.0869311{col 26}{space 2} .0164091{col 37}{space 1}   -5.30{col 46}{space 3}0.000{col 54}{space 4}-.1191018{col 67}{space 3}-.0547605
+{txt}{space 3}20190426  {c |}{col 14}{res}{space 2}-.0831669{col 26}{space 2} .0165338{col 37}{space 1}   -5.03{col 46}{space 3}0.000{col 54}{space 4}-.1155821{col 67}{space 3}-.0507517
+{txt}{space 3}20190507  {c |}{col 14}{res}{space 2}-.2998118{col 26}{space 2} .0176056{col 37}{space 1}  -17.03{col 46}{space 3}0.000{col 54}{space 4}-.3343282{col 67}{space 3}-.2652953
+{txt}{space 3}20190508  {c |}{col 14}{res}{space 2}-.2906107{col 26}{space 2} .0158056{col 37}{space 1}  -18.39{col 46}{space 3}0.000{col 54}{space 4}-.3215982{col 67}{space 3}-.2596232
+{txt}{space 3}20190509  {c |}{col 14}{res}{space 2}-.2802728{col 26}{space 2} .0151082{col 37}{space 1}  -18.55{col 46}{space 3}0.000{col 54}{space 4}-.3098931{col 67}{space 3}-.2506525
+{txt}{space 3}20190510  {c |}{col 14}{res}{space 2}-.2503387{col 26}{space 2} .0143594{col 37}{space 1}  -17.43{col 46}{space 3}0.000{col 54}{space 4}-.2784909{col 67}{space 3}-.2221864
+{txt}{space 3}20190513  {c |}{col 14}{res}{space 2}-.2072787{col 26}{space 2} .0139822{col 37}{space 1}  -14.82{col 46}{space 3}0.000{col 54}{space 4}-.2346913{col 67}{space 3}-.1798661
+{txt}{space 3}20190514  {c |}{col 14}{res}{space 2} -.245274{col 26}{space 2} .0139149{col 37}{space 1}  -17.63{col 46}{space 3}0.000{col 54}{space 4}-.2725547{col 67}{space 3}-.2179933
+{txt}{space 3}20190515  {c |}{col 14}{res}{space 2}-.1668414{col 26}{space 2} .0147134{col 37}{space 1}  -11.34{col 46}{space 3}0.000{col 54}{space 4}-.1956876{col 67}{space 3}-.1379952
+{txt}{space 3}20190516  {c |}{col 14}{res}{space 2}-.1033338{col 26}{space 2} .0157128{col 37}{space 1}   -6.58{col 46}{space 3}0.000{col 54}{space 4}-.1341394{col 67}{space 3}-.0725283
+{txt}{space 3}20190517  {c |}{col 14}{res}{space 2}-.1064494{col 26}{space 2}  .016104{col 37}{space 1}   -6.61{col 46}{space 3}0.000{col 54}{space 4}-.1380219{col 67}{space 3}-.0748769
+{txt}{space 3}20190520  {c |}{col 14}{res}{space 2}-.0459563{col 26}{space 2} .0159384{col 37}{space 1}   -2.88{col 46}{space 3}0.004{col 54}{space 4}-.0772042{col 67}{space 3}-.0147083
+{txt}{space 3}20190521  {c |}{col 14}{res}{space 2}-.0532663{col 26}{space 2} .0149519{col 37}{space 1}   -3.56{col 46}{space 3}0.000{col 54}{space 4}-.0825802{col 67}{space 3}-.0239524
+{txt}{space 3}20190522  {c |}{col 14}{res}{space 2} .0004306{col 26}{space 2}  .015342{col 37}{space 1}    0.03{col 46}{space 3}0.978{col 54}{space 4} -.029648{col 67}{space 3} .0305092
+{txt}{space 3}20190523  {c |}{col 14}{res}{space 2}-.0449783{col 26}{space 2} .0157034{col 37}{space 1}   -2.86{col 46}{space 3}0.004{col 54}{space 4}-.0757655{col 67}{space 3}-.0141911
+{txt}{space 3}20190524  {c |}{col 14}{res}{space 2} -.050386{col 26}{space 2} .0205361{col 37}{space 1}   -2.45{col 46}{space 3}0.014{col 54}{space 4}-.0906478{col 67}{space 3}-.0101242
+{txt}{space 3}20190529  {c |}{col 14}{res}{space 2} -.012769{col 26}{space 2} .0172827{col 37}{space 1}   -0.74{col 46}{space 3}0.460{col 54}{space 4}-.0466525{col 67}{space 3} .0211145
+{txt}{space 3}20190530  {c |}{col 14}{res}{space 2} .0322951{col 26}{space 2} .0155303{col 37}{space 1}    2.08{col 46}{space 3}0.038{col 54}{space 4} .0018473{col 67}{space 3} .0627429
+{txt}{space 3}20190531  {c |}{col 14}{res}{space 2} .0120462{col 26}{space 2} .0167308{col 37}{space 1}    0.72{col 46}{space 3}0.472{col 54}{space 4}-.0207552{col 67}{space 3} .0448475
+{txt}{space 3}20190603  {c |}{col 14}{res}{space 2} .0211531{col 26}{space 2} .0143452{col 37}{space 1}    1.47{col 46}{space 3}0.140{col 54}{space 4}-.0069712{col 67}{space 3} .0492774
+{txt}{space 3}20190604  {c |}{col 14}{res}{space 2} .0257722{col 26}{space 2}   .01547{col 37}{space 1}    1.67{col 46}{space 3}0.096{col 54}{space 4}-.0045575{col 67}{space 3} .0561018
+{txt}{space 3}20190605  {c |}{col 14}{res}{space 2}-.0053046{col 26}{space 2} .0160533{col 37}{space 1}   -0.33{col 46}{space 3}0.741{col 54}{space 4}-.0367777{col 67}{space 3} .0261685
+{txt}{space 3}20190606  {c |}{col 14}{res}{space 2} .1135166{col 26}{space 2} .0142946{col 37}{space 1}    7.94{col 46}{space 3}0.000{col 54}{space 4} .0854913{col 67}{space 3} .1415418
+{txt}{space 3}20190610  {c |}{col 14}{res}{space 2} .0407382{col 26}{space 2} .0163358{col 37}{space 1}    2.49{col 46}{space 3}0.013{col 54}{space 4} .0087112{col 67}{space 3} .0727653
+{txt}{space 3}20190611  {c |}{col 14}{res}{space 2}-.0062741{col 26}{space 2} .0184847{col 37}{space 1}   -0.34{col 46}{space 3}0.734{col 54}{space 4}-.0425142{col 67}{space 3} .0299659
+{txt}{space 3}20190612  {c |}{col 14}{res}{space 2} -.004931{col 26}{space 2} .0146806{col 37}{space 1}   -0.34{col 46}{space 3}0.737{col 54}{space 4}-.0337128{col 67}{space 3} .0238509
+{txt}{space 3}20190614  {c |}{col 14}{res}{space 2}-.0512199{col 26}{space 2} .0164735{col 37}{space 1}   -3.11{col 46}{space 3}0.002{col 54}{space 4} -.083517{col 67}{space 3}-.0189229
+{txt}{space 3}20190618  {c |}{col 14}{res}{space 2}-.0776538{col 26}{space 2} .0158258{col 37}{space 1}   -4.91{col 46}{space 3}0.000{col 54}{space 4} -.108681{col 67}{space 3}-.0466267
+{txt}{space 3}20190620  {c |}{col 14}{res}{space 2}-.0263313{col 26}{space 2} .0136794{col 37}{space 1}   -1.92{col 46}{space 3}0.054{col 54}{space 4}-.0531503{col 67}{space 3} .0004877
+{txt}{space 3}20190621  {c |}{col 14}{res}{space 2}-.1029873{col 26}{space 2} .0156353{col 37}{space 1}   -6.59{col 46}{space 3}0.000{col 54}{space 4}-.1336409{col 67}{space 3}-.0723337
+{txt}{space 3}20190624  {c |}{col 14}{res}{space 2}-.0041557{col 26}{space 2} .0139439{col 37}{space 1}   -0.30{col 46}{space 3}0.766{col 54}{space 4}-.0314934{col 67}{space 3}  .023182
+{txt}{space 3}20190625  {c |}{col 14}{res}{space 2}-.0453174{col 26}{space 2} .0131156{col 37}{space 1}   -3.46{col 46}{space 3}0.001{col 54}{space 4}-.0710311{col 67}{space 3}-.0196037
+{txt}{space 3}20190626  {c |}{col 14}{res}{space 2}-.0530683{col 26}{space 2} .0144003{col 37}{space 1}   -3.69{col 46}{space 3}0.000{col 54}{space 4}-.0813007{col 67}{space 3}-.0248358
+{txt}{space 3}20190627  {c |}{col 14}{res}{space 2}-.0507244{col 26}{space 2} .0142178{col 37}{space 1}   -3.57{col 46}{space 3}0.000{col 54}{space 4}-.0785989{col 67}{space 3}-.0228499
+{txt}{space 3}20190628  {c |}{col 14}{res}{space 2}-.0785125{col 26}{space 2} .0160486{col 37}{space 1}   -4.89{col 46}{space 3}0.000{col 54}{space 4}-.1099765{col 67}{space 3}-.0470485
+{txt}{space 3}20190701  {c |}{col 14}{res}{space 2}-.1015104{col 26}{space 2}  .015184{col 37}{space 1}   -6.69{col 46}{space 3}0.000{col 54}{space 4}-.1312792{col 67}{space 3}-.0717416
+{txt}{space 3}20190702  {c |}{col 14}{res}{space 2}-.0922664{col 26}{space 2} .0127361{col 37}{space 1}   -7.24{col 46}{space 3}0.000{col 54}{space 4}-.1172361{col 67}{space 3}-.0672968
+{txt}{space 3}20190703  {c |}{col 14}{res}{space 2}-.0630682{col 26}{space 2} .0148395{col 37}{space 1}   -4.25{col 46}{space 3}0.000{col 54}{space 4}-.0921616{col 67}{space 3}-.0339748
+{txt}{space 3}20190704  {c |}{col 14}{res}{space 2}-.0658758{col 26}{space 2} .0143014{col 37}{space 1}   -4.61{col 46}{space 3}0.000{col 54}{space 4}-.0939144{col 67}{space 3}-.0378373
+{txt}{space 3}20190708  {c |}{col 14}{res}{space 2}-.0854023{col 26}{space 2} .0140207{col 37}{space 1}   -6.09{col 46}{space 3}0.000{col 54}{space 4}-.1128903{col 67}{space 3}-.0579142
+{txt}{space 3}20190709  {c |}{col 14}{res}{space 2}-.0999323{col 26}{space 2} .0153208{col 37}{space 1}   -6.52{col 46}{space 3}0.000{col 54}{space 4}-.1299693{col 67}{space 3}-.0698953
+{txt}{space 3}20190710  {c |}{col 14}{res}{space 2}-.1611238{col 26}{space 2} .0144015{col 37}{space 1}  -11.19{col 46}{space 3}0.000{col 54}{space 4}-.1893585{col 67}{space 3}-.1328891
+{txt}{space 3}20190711  {c |}{col 14}{res}{space 2}-.0961293{col 26}{space 2} .0150508{col 37}{space 1}   -6.39{col 46}{space 3}0.000{col 54}{space 4} -.125637{col 67}{space 3}-.0666215
+{txt}{space 3}20190712  {c |}{col 14}{res}{space 2}-.1117376{col 26}{space 2} .0136817{col 37}{space 1}   -8.17{col 46}{space 3}0.000{col 54}{space 4} -.138561{col 67}{space 3}-.0849141
+{txt}{space 3}20190716  {c |}{col 14}{res}{space 2}-.1208081{col 26}{space 2} .0152806{col 37}{space 1}   -7.91{col 46}{space 3}0.000{col 54}{space 4}-.1507663{col 67}{space 3}-.0908499
+{txt}{space 3}20190717  {c |}{col 14}{res}{space 2}-.1533924{col 26}{space 2} .0149608{col 37}{space 1}  -10.25{col 46}{space 3}0.000{col 54}{space 4}-.1827237{col 67}{space 3}-.1240611
+{txt}{space 3}20190718  {c |}{col 14}{res}{space 2}-.2213991{col 26}{space 2} .0143062{col 37}{space 1}  -15.48{col 46}{space 3}0.000{col 54}{space 4} -.249447{col 67}{space 3}-.1933511
+{txt}{space 3}20190719  {c |}{col 14}{res}{space 2}-.1066755{col 26}{space 2} .0147565{col 37}{space 1}   -7.23{col 46}{space 3}0.000{col 54}{space 4}-.1356061{col 67}{space 3}-.0777448
+{txt}{space 3}20190722  {c |}{col 14}{res}{space 2}-.0694218{col 26}{space 2} .0143859{col 37}{space 1}   -4.83{col 46}{space 3}0.000{col 54}{space 4}-.0976259{col 67}{space 3}-.0412176
+{txt}{space 3}20190723  {c |}{col 14}{res}{space 2}-.0439649{col 26}{space 2} .0154765{col 37}{space 1}   -2.84{col 46}{space 3}0.005{col 54}{space 4}-.0743073{col 67}{space 3}-.0136226
+{txt}{space 3}20190724  {c |}{col 14}{res}{space 2}-.0863349{col 26}{space 2} .0151147{col 37}{space 1}   -5.71{col 46}{space 3}0.000{col 54}{space 4} -.115968{col 67}{space 3}-.0567018
+{txt}{space 3}20190725  {c |}{col 14}{res}{space 2}-.0546063{col 26}{space 2} .0150269{col 37}{space 1}   -3.63{col 46}{space 3}0.000{col 54}{space 4}-.0840671{col 67}{space 3}-.0251454
+{txt}{space 3}20190726  {c |}{col 14}{res}{space 2}-.0549738{col 26}{space 2} .0138701{col 37}{space 1}   -3.96{col 46}{space 3}0.000{col 54}{space 4}-.0821666{col 67}{space 3}-.0277809
+{txt}{space 3}20190729  {c |}{col 14}{res}{space 2}-.0554362{col 26}{space 2}  .014491{col 37}{space 1}   -3.83{col 46}{space 3}0.000{col 54}{space 4}-.0838465{col 67}{space 3}-.0270259
+{txt}{space 3}20190730  {c |}{col 14}{res}{space 2}-.1653445{col 26}{space 2} .0143203{col 37}{space 1}  -11.55{col 46}{space 3}0.000{col 54}{space 4}  -.19342{col 67}{space 3} -.137269
+{txt}{space 3}20190731  {c |}{col 14}{res}{space 2}-.1329334{col 26}{space 2} .0152209{col 37}{space 1}   -8.73{col 46}{space 3}0.000{col 54}{space 4}-.1627747{col 67}{space 3}-.1030922
+{txt}{space 3}20190801  {c |}{col 14}{res}{space 2}-.0940047{col 26}{space 2} .0155613{col 37}{space 1}   -6.04{col 46}{space 3}0.000{col 54}{space 4}-.1245132{col 67}{space 3}-.0634961
+{txt}{space 3}20190802  {c |}{col 14}{res}{space 2}-.2067132{col 26}{space 2} .0163386{col 37}{space 1}  -12.65{col 46}{space 3}0.000{col 54}{space 4}-.2387457{col 67}{space 3}-.1746807
+{txt}{space 3}20190806  {c |}{col 14}{res}{space 2}-.1574293{col 26}{space 2} .0145402{col 37}{space 1}  -10.83{col 46}{space 3}0.000{col 54}{space 4}-.1859358{col 67}{space 3}-.1289227
+{txt}{space 3}20190807  {c |}{col 14}{res}{space 2}-.0505133{col 26}{space 2} .0153657{col 37}{space 1}   -3.29{col 46}{space 3}0.001{col 54}{space 4}-.0806383{col 67}{space 3}-.0203883
+{txt}{space 3}20190808  {c |}{col 14}{res}{space 2}-.0479917{col 26}{space 2} .0147638{col 37}{space 1}   -3.25{col 46}{space 3}0.001{col 54}{space 4}-.0769368{col 67}{space 3}-.0190466
+{txt}{space 3}20190809  {c |}{col 14}{res}{space 2}-.0507146{col 26}{space 2} .0141967{col 37}{space 1}   -3.57{col 46}{space 3}0.000{col 54}{space 4}-.0785478{col 67}{space 3}-.0228814
+{txt}{space 3}20190813  {c |}{col 14}{res}{space 2}-.1174467{col 26}{space 2} .0145494{col 37}{space 1}   -8.07{col 46}{space 3}0.000{col 54}{space 4}-.1459715{col 67}{space 3} -.088922
+{txt}{space 3}20190814  {c |}{col 14}{res}{space 2}-.0303248{col 26}{space 2} .0147298{col 37}{space 1}   -2.06{col 46}{space 3}0.040{col 54}{space 4}-.0592033{col 67}{space 3}-.0014464
+{txt}{space 3}20190816  {c |}{col 14}{res}{space 2}-.0233972{col 26}{space 2}  .017275{col 37}{space 1}   -1.35{col 46}{space 3}0.176{col 54}{space 4}-.0572656{col 67}{space 3} .0104712
+{txt}{space 3}20190819  {c |}{col 14}{res}{space 2}-.0254891{col 26}{space 2} .0176428{col 37}{space 1}   -1.44{col 46}{space 3}0.149{col 54}{space 4}-.0600785{col 67}{space 3} .0091003
+{txt}{space 3}20190820  {c |}{col 14}{res}{space 2}-.0058478{col 26}{space 2} .0159737{col 37}{space 1}   -0.37{col 46}{space 3}0.714{col 54}{space 4}-.0371648{col 67}{space 3} .0254693
+{txt}{space 3}20190821  {c |}{col 14}{res}{space 2}  .029763{col 26}{space 2} .0159908{col 37}{space 1}    1.86{col 46}{space 3}0.063{col 54}{space 4}-.0015877{col 67}{space 3} .0611137
+{txt}{space 3}20190822  {c |}{col 14}{res}{space 2}  -.01259{col 26}{space 2} .0146746{col 37}{space 1}   -0.86{col 46}{space 3}0.391{col 54}{space 4}-.0413603{col 67}{space 3} .0161802
+{txt}{space 3}20190823  {c |}{col 14}{res}{space 2}-.0057347{col 26}{space 2} .0177414{col 37}{space 1}   -0.32{col 46}{space 3}0.747{col 54}{space 4}-.0405174{col 67}{space 3}  .029048
+{txt}{space 3}20190826  {c |}{col 14}{res}{space 2}-.0833542{col 26}{space 2}  .015828{col 37}{space 1}   -5.27{col 46}{space 3}0.000{col 54}{space 4}-.1143856{col 67}{space 3}-.0523227
+{txt}{space 3}20190827  {c |}{col 14}{res}{space 2}  .006027{col 26}{space 2} .0166873{col 37}{space 1}    0.36{col 46}{space 3}0.718{col 54}{space 4}-.0266892{col 67}{space 3} .0387432
+{txt}{space 3}20190828  {c |}{col 14}{res}{space 2}-.0250582{col 26}{space 2} .0213966{col 37}{space 1}   -1.17{col 46}{space 3}0.242{col 54}{space 4} -.067007{col 67}{space 3} .0168907
+{txt}{space 3}20190829  {c |}{col 14}{res}{space 2} -.040879{col 26}{space 2} .0185813{col 37}{space 1}   -2.20{col 46}{space 3}0.028{col 54}{space 4}-.0773085{col 67}{space 3}-.0044495
+{txt}{space 3}20190830  {c |}{col 14}{res}{space 2}-.0637871{col 26}{space 2} .0182841{col 37}{space 1}   -3.49{col 46}{space 3}0.000{col 54}{space 4}-.0996339{col 67}{space 3}-.0279404
+{txt}{space 3}20190903  {c |}{col 14}{res}{space 2}-.0219899{col 26}{space 2} .0148925{col 37}{space 1}   -1.48{col 46}{space 3}0.140{col 54}{space 4}-.0511873{col 67}{space 3} .0072075
+{txt}{space 3}20190904  {c |}{col 14}{res}{space 2}-.0780855{col 26}{space 2} .0200825{col 37}{space 1}   -3.89{col 46}{space 3}0.000{col 54}{space 4}-.1174581{col 67}{space 3} -.038713
+{txt}{space 3}20190905  {c |}{col 14}{res}{space 2}-.1248015{col 26}{space 2} .0167332{col 37}{space 1}   -7.46{col 46}{space 3}0.000{col 54}{space 4}-.1576077{col 67}{space 3}-.0919953
+{txt}{space 3}20190906  {c |}{col 14}{res}{space 2}-.0680251{col 26}{space 2} .0164945{col 37}{space 1}   -4.12{col 46}{space 3}0.000{col 54}{space 4}-.1003632{col 67}{space 3}-.0356869
+{txt}{space 3}20190909  {c |}{col 14}{res}{space 2}-.0887378{col 26}{space 2} .0146225{col 37}{space 1}   -6.07{col 46}{space 3}0.000{col 54}{space 4}-.1174059{col 67}{space 3}-.0600698
+{txt}{space 3}20190910  {c |}{col 14}{res}{space 2}-.0901226{col 26}{space 2} .0137126{col 37}{space 1}   -6.57{col 46}{space 3}0.000{col 54}{space 4}-.1170067{col 67}{space 3}-.0632385
+{txt}{space 3}20190911  {c |}{col 14}{res}{space 2}-.1653799{col 26}{space 2} .0161071{col 37}{space 1}  -10.27{col 46}{space 3}0.000{col 54}{space 4}-.1969586{col 67}{space 3}-.1338012
+{txt}{space 3}20190912  {c |}{col 14}{res}{space 2}-.1558417{col 26}{space 2} .0168263{col 37}{space 1}   -9.26{col 46}{space 3}0.000{col 54}{space 4}-.1888303{col 67}{space 3}-.1228531
+{txt}{space 3}20190913  {c |}{col 14}{res}{space 2}-.2223224{col 26}{space 2} .0177044{col 37}{space 1}  -12.56{col 46}{space 3}0.000{col 54}{space 4}-.2570327{col 67}{space 3}-.1876121
+{txt}{space 3}20190917  {c |}{col 14}{res}{space 2}-.1723011{col 26}{space 2} .0165212{col 37}{space 1}  -10.43{col 46}{space 3}0.000{col 54}{space 4}-.2046917{col 67}{space 3}-.1399105
+{txt}{space 3}20190918  {c |}{col 14}{res}{space 2}-.1402611{col 26}{space 2} .0142067{col 37}{space 1}   -9.87{col 46}{space 3}0.000{col 54}{space 4} -.168114{col 67}{space 3}-.1124082
+{txt}{space 3}20190919  {c |}{col 14}{res}{space 2} -.139631{col 26}{space 2}  .015704{col 37}{space 1}   -8.89{col 46}{space 3}0.000{col 54}{space 4}-.1704194{col 67}{space 3}-.1088426
+{txt}{space 3}20190920  {c |}{col 14}{res}{space 2}-.1487558{col 26}{space 2} .0151745{col 37}{space 1}   -9.80{col 46}{space 3}0.000{col 54}{space 4} -.178506{col 67}{space 3}-.1190057
+{txt}{space 3}20190924  {c |}{col 14}{res}{space 2}-.1882259{col 26}{space 2}   .01584{col 37}{space 1}  -11.88{col 46}{space 3}0.000{col 54}{space 4}-.2192809{col 67}{space 3}-.1571708
+{txt}{space 3}20190925  {c |}{col 14}{res}{space 2}-.1511118{col 26}{space 2} .0168877{col 37}{space 1}   -8.95{col 46}{space 3}0.000{col 54}{space 4}-.1842208{col 67}{space 3}-.1180028
+{txt}{space 3}20190926  {c |}{col 14}{res}{space 2}-.2220405{col 26}{space 2} .0184475{col 37}{space 1}  -12.04{col 46}{space 3}0.000{col 54}{space 4}-.2582076{col 67}{space 3}-.1858734
+{txt}{space 3}20190927  {c |}{col 14}{res}{space 2}-.1925975{col 26}{space 2} .0178557{col 37}{space 1}  -10.79{col 46}{space 3}0.000{col 54}{space 4}-.2276044{col 67}{space 3}-.1575906
+{txt}{space 3}20191001  {c |}{col 14}{res}{space 2}-.1270278{col 26}{space 2} .0151847{col 37}{space 1}   -8.37{col 46}{space 3}0.000{col 54}{space 4}-.1567979{col 67}{space 3}-.0972576
+{txt}{space 3}20191002  {c |}{col 14}{res}{space 2}-.1396109{col 26}{space 2} .0149534{col 37}{space 1}   -9.34{col 46}{space 3}0.000{col 54}{space 4}-.1689277{col 67}{space 3}-.1102941
+{txt}{space 3}20191004  {c |}{col 14}{res}{space 2}-.1060842{col 26}{space 2}  .016808{col 37}{space 1}   -6.31{col 46}{space 3}0.000{col 54}{space 4} -.139037{col 67}{space 3}-.0731313
+{txt}{space 3}20191007  {c |}{col 14}{res}{space 2}-.1086538{col 26}{space 2} .0153444{col 37}{space 1}   -7.08{col 46}{space 3}0.000{col 54}{space 4}-.1387371{col 67}{space 3}-.0785705
+{txt}{space 3}20191008  {c |}{col 14}{res}{space 2} -.155078{col 26}{space 2} .0153868{col 37}{space 1}  -10.08{col 46}{space 3}0.000{col 54}{space 4}-.1852444{col 67}{space 3}-.1249115
+{txt}{space 3}20191009  {c |}{col 14}{res}{space 2}-.1366963{col 26}{space 2} .0144281{col 37}{space 1}   -9.47{col 46}{space 3}0.000{col 54}{space 4}-.1649831{col 67}{space 3}-.1084094
+{txt}{space 3}20191010  {c |}{col 14}{res}{space 2}-.1163793{col 26}{space 2} .0161377{col 37}{space 1}   -7.21{col 46}{space 3}0.000{col 54}{space 4} -.148018{col 67}{space 3}-.0847406
+{txt}{space 3}20191015  {c |}{col 14}{res}{space 2}-.2237823{col 26}{space 2}  .015885{col 37}{space 1}  -14.09{col 46}{space 3}0.000{col 54}{space 4}-.2549256{col 67}{space 3}-.1926391
+{txt}{space 3}20191016  {c |}{col 14}{res}{space 2}-.1776412{col 26}{space 2} .0146943{col 37}{space 1}  -12.09{col 46}{space 3}0.000{col 54}{space 4}  -.20645{col 67}{space 3}-.1488324
+{txt}{space 3}20191017  {c |}{col 14}{res}{space 2}-.1560961{col 26}{space 2} .0160083{col 37}{space 1}   -9.75{col 46}{space 3}0.000{col 54}{space 4}-.1874811{col 67}{space 3} -.124711
+{txt}{space 3}20191021  {c |}{col 14}{res}{space 2}-.0867698{col 26}{space 2} .0157343{col 37}{space 1}   -5.51{col 46}{space 3}0.000{col 54}{space 4}-.1176175{col 67}{space 3}-.0559221
+{txt}{space 3}20191023  {c |}{col 14}{res}{space 2}-.1297491{col 26}{space 2} .0158281{col 37}{space 1}   -8.20{col 46}{space 3}0.000{col 54}{space 4}-.1607808{col 67}{space 3}-.0987175
+{txt}{space 3}20191025  {c |}{col 14}{res}{space 2}-.1900565{col 26}{space 2}  .015439{col 37}{space 1}  -12.31{col 46}{space 3}0.000{col 54}{space 4}-.2203253{col 67}{space 3}-.1597878
+{txt}{space 3}20191028  {c |}{col 14}{res}{space 2}-.2013491{col 26}{space 2} .0157298{col 37}{space 1}  -12.80{col 46}{space 3}0.000{col 54}{space 4} -.232188{col 67}{space 3}-.1705102
+{txt}{space 3}20191029  {c |}{col 14}{res}{space 2} -.241822{col 26}{space 2} .0152584{col 37}{space 1}  -15.85{col 46}{space 3}0.000{col 54}{space 4}-.2717367{col 67}{space 3}-.2119072
+{txt}{space 3}20191030  {c |}{col 14}{res}{space 2}-.3835623{col 26}{space 2} .0142243{col 37}{space 1}  -26.97{col 46}{space 3}0.000{col 54}{space 4}-.4114497{col 67}{space 3} -.355675
+{txt}{space 3}20191031  {c |}{col 14}{res}{space 2}-.2176429{col 26}{space 2} .0154052{col 37}{space 1}  -14.13{col 46}{space 3}0.000{col 54}{space 4}-.2478455{col 67}{space 3}-.1874403
+{txt}{space 12} {c |}
+{space 7}_cons {c |}{col 14}{res}{space 2}-5.847773{col 26}{space 2} .0115528{col 37}{space 1} -506.18{col 46}{space 3}0.000{col 54}{space 4}-5.870422{col 67}{space 3}-5.825123
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. 
+. areg logtw80size logw1dbw1, absorb(ticker) cluster(newgroup) // -.617646 
+
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:ticker}{col 49}No. of categories{col 67}= {res}     2,644
+{txt}{col 49}F({res}   1{txt},{res}   4107{txt}){col 67}= {res}  77580.90
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.8805
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.8795
+{txt}{col 49}Root MSE{col 67}= {res}    0.6556
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1} logtw80size{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2}-.6177473{col 26}{space 2} .0022179{col 37}{space 1} -278.53{col 46}{space 3}0.000{col 54}{space 4}-.6220955{col 67}{space 3}-.6133991
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2}-5.030505{col 26}{space 2} .0022998{col 37}{space 1}-2187.33{col 46}{space 3}0.000{col 54}{space 4}-5.035014{col 67}{space 3}-5.025996
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. areg logtw80size logw1dbw1, absorb(date) cluster(newgroup) // -.6510443
+
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:date}{col 49}No. of categories{col 67}= {res}       125
+{txt}{col 49}F({res}   1{txt},{res}   4107{txt}){col 67}= {res} 258734.34
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.8046
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.8045
+{txt}{col 49}Root MSE{col 67}= {res}    0.8351
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1} logtw80size{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2} -.651087{col 26}{space 2}   .00128{col 37}{space 1} -508.66{col 46}{space 3}0.000{col 54}{space 4}-.6535965{col 67}{space 3}-.6485775
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2}-5.029046{col 26}{space 2} .0025226{col 37}{space 1}-1993.63{col 46}{space 3}0.000{col 54}{space 4}-5.033992{col 67}{space 3}  -5.0241
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. areg logtw80size logw1dbw1 i.date, absorb(ticker) cluster(newgroup) // -.6111797
+{res}
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:ticker}{col 49}No. of categories{col 67}= {res}     2,644
+{txt}{col 49}F({res} 125{txt},{res}   4107{txt}){col 67}= {res}    815.77
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.8827
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.8817
+{txt}{col 49}Root MSE{col 67}= {res}    0.6497
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1} logtw80size{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2}-.6113177{col 26}{space 2} .0021093{col 37}{space 1} -289.82{col 46}{space 3}0.000{col 54}{space 4}-.6154531{col 67}{space 3}-.6071824
+{txt}{space 12} {c |}
+{space 8}date {c |}
+{space 3}20190402  {c |}{col 14}{res}{space 2} .0653964{col 26}{space 2} .0250715{col 37}{space 1}    2.61{col 46}{space 3}0.009{col 54}{space 4} .0162427{col 67}{space 3}   .11455
+{txt}{space 3}20190403  {c |}{col 14}{res}{space 2} .0184557{col 26}{space 2} .0220282{col 37}{space 1}    0.84{col 46}{space 3}0.402{col 54}{space 4}-.0247315{col 67}{space 3} .0616429
+{txt}{space 3}20190404  {c |}{col 14}{res}{space 2} .1030468{col 26}{space 2} .0229236{col 37}{space 1}    4.50{col 46}{space 3}0.000{col 54}{space 4} .0581041{col 67}{space 3} .1479896
+{txt}{space 3}20190405  {c |}{col 14}{res}{space 2}  .083318{col 26}{space 2} .0202716{col 37}{space 1}    4.11{col 46}{space 3}0.000{col 54}{space 4} .0435747{col 67}{space 3} .1230613
+{txt}{space 3}20190408  {c |}{col 14}{res}{space 2} .0901548{col 26}{space 2} .0230326{col 37}{space 1}    3.91{col 46}{space 3}0.000{col 54}{space 4} .0449984{col 67}{space 3} .1353113
+{txt}{space 3}20190409  {c |}{col 14}{res}{space 2} .0639247{col 26}{space 2} .0235085{col 37}{space 1}    2.72{col 46}{space 3}0.007{col 54}{space 4} .0178354{col 67}{space 3}  .110014
+{txt}{space 3}20190410  {c |}{col 14}{res}{space 2} .0818937{col 26}{space 2} .0222706{col 37}{space 1}    3.68{col 46}{space 3}0.000{col 54}{space 4} .0382313{col 67}{space 3} .1255562
+{txt}{space 3}20190411  {c |}{col 14}{res}{space 2}   .10393{col 26}{space 2}  .022192{col 37}{space 1}    4.68{col 46}{space 3}0.000{col 54}{space 4} .0604218{col 67}{space 3} .1474383
+{txt}{space 3}20190412  {c |}{col 14}{res}{space 2} .0913094{col 26}{space 2} .0235205{col 37}{space 1}    3.88{col 46}{space 3}0.000{col 54}{space 4} .0451964{col 67}{space 3} .1374225
+{txt}{space 3}20190415  {c |}{col 14}{res}{space 2}  .026738{col 26}{space 2}  .021065{col 37}{space 1}    1.27{col 46}{space 3}0.204{col 54}{space 4}-.0145609{col 67}{space 3} .0680369
+{txt}{space 3}20190416  {c |}{col 14}{res}{space 2} .0959154{col 26}{space 2} .0220912{col 37}{space 1}    4.34{col 46}{space 3}0.000{col 54}{space 4} .0526047{col 67}{space 3} .1392261
+{txt}{space 3}20190418  {c |}{col 14}{res}{space 2}-.0005961{col 26}{space 2} .0193042{col 37}{space 1}   -0.03{col 46}{space 3}0.975{col 54}{space 4}-.0384428{col 67}{space 3} .0372507
+{txt}{space 3}20190422  {c |}{col 14}{res}{space 2} .0854495{col 26}{space 2} .0205696{col 37}{space 1}    4.15{col 46}{space 3}0.000{col 54}{space 4} .0451219{col 67}{space 3} .1257771
+{txt}{space 3}20190423  {c |}{col 14}{res}{space 2} .0504166{col 26}{space 2} .0239744{col 37}{space 1}    2.10{col 46}{space 3}0.036{col 54}{space 4} .0034138{col 67}{space 3} .0974195
+{txt}{space 3}20190424  {c |}{col 14}{res}{space 2}-.0756522{col 26}{space 2} .0220378{col 37}{space 1}   -3.43{col 46}{space 3}0.001{col 54}{space 4}-.1188582{col 67}{space 3}-.0324461
+{txt}{space 3}20190425  {c |}{col 14}{res}{space 2}-.0499606{col 26}{space 2} .0220022{col 37}{space 1}   -2.27{col 46}{space 3}0.023{col 54}{space 4}-.0930969{col 67}{space 3}-.0068244
+{txt}{space 3}20190426  {c |}{col 14}{res}{space 2}-.0375997{col 26}{space 2} .0184324{col 37}{space 1}   -2.04{col 46}{space 3}0.041{col 54}{space 4}-.0737371{col 67}{space 3}-.0014622
+{txt}{space 3}20190507  {c |}{col 14}{res}{space 2}-.2287702{col 26}{space 2} .0198867{col 37}{space 1}  -11.50{col 46}{space 3}0.000{col 54}{space 4}-.2677588{col 67}{space 3}-.1897816
+{txt}{space 3}20190508  {c |}{col 14}{res}{space 2}-.2230303{col 26}{space 2} .0186239{col 37}{space 1}  -11.98{col 46}{space 3}0.000{col 54}{space 4}-.2595433{col 67}{space 3}-.1865173
+{txt}{space 3}20190509  {c |}{col 14}{res}{space 2}-.2194623{col 26}{space 2} .0243474{col 37}{space 1}   -9.01{col 46}{space 3}0.000{col 54}{space 4}-.2671964{col 67}{space 3}-.1717282
+{txt}{space 3}20190510  {c |}{col 14}{res}{space 2}-.2090515{col 26}{space 2} .0222217{col 37}{space 1}   -9.41{col 46}{space 3}0.000{col 54}{space 4}-.2526181{col 67}{space 3}-.1654849
+{txt}{space 3}20190513  {c |}{col 14}{res}{space 2}-.1891852{col 26}{space 2} .0178479{col 37}{space 1}  -10.60{col 46}{space 3}0.000{col 54}{space 4}-.2241768{col 67}{space 3}-.1541936
+{txt}{space 3}20190514  {c |}{col 14}{res}{space 2}-.2098304{col 26}{space 2} .0230082{col 37}{space 1}   -9.12{col 46}{space 3}0.000{col 54}{space 4} -.254939{col 67}{space 3}-.1647219
+{txt}{space 3}20190515  {c |}{col 14}{res}{space 2}-.1634805{col 26}{space 2} .0203008{col 37}{space 1}   -8.05{col 46}{space 3}0.000{col 54}{space 4}-.2032811{col 67}{space 3}-.1236799
+{txt}{space 3}20190516  {c |}{col 14}{res}{space 2}-.1083372{col 26}{space 2} .0213314{col 37}{space 1}   -5.08{col 46}{space 3}0.000{col 54}{space 4}-.1501582{col 67}{space 3}-.0665161
+{txt}{space 3}20190517  {c |}{col 14}{res}{space 2}-.1018617{col 26}{space 2} .0214308{col 37}{space 1}   -4.75{col 46}{space 3}0.000{col 54}{space 4}-.1438777{col 67}{space 3}-.0598458
+{txt}{space 3}20190520  {c |}{col 14}{res}{space 2}-.0734951{col 26}{space 2} .0208406{col 37}{space 1}   -3.53{col 46}{space 3}0.000{col 54}{space 4}-.1143539{col 67}{space 3}-.0326363
+{txt}{space 3}20190521  {c |}{col 14}{res}{space 2}-.0612901{col 26}{space 2}  .019371{col 37}{space 1}   -3.16{col 46}{space 3}0.002{col 54}{space 4}-.0992678{col 67}{space 3}-.0233125
+{txt}{space 3}20190522  {c |}{col 14}{res}{space 2} .0086562{col 26}{space 2}  .016835{col 37}{space 1}    0.51{col 46}{space 3}0.607{col 54}{space 4}-.0243495{col 67}{space 3} .0416619
+{txt}{space 3}20190523  {c |}{col 14}{res}{space 2}-.0532308{col 26}{space 2} .0182193{col 37}{space 1}   -2.92{col 46}{space 3}0.004{col 54}{space 4}-.0889505{col 67}{space 3} -.017511
+{txt}{space 3}20190524  {c |}{col 14}{res}{space 2} -.048048{col 26}{space 2} .0230897{col 37}{space 1}   -2.08{col 46}{space 3}0.038{col 54}{space 4}-.0933164{col 67}{space 3}-.0027796
+{txt}{space 3}20190529  {c |}{col 14}{res}{space 2}-.0325239{col 26}{space 2} .0303666{col 37}{space 1}   -1.07{col 46}{space 3}0.284{col 54}{space 4} -.092059{col 67}{space 3} .0270111
+{txt}{space 3}20190530  {c |}{col 14}{res}{space 2} .0014245{col 26}{space 2} .0176876{col 37}{space 1}    0.08{col 46}{space 3}0.936{col 54}{space 4}-.0332528{col 67}{space 3} .0361018
+{txt}{space 3}20190531  {c |}{col 14}{res}{space 2} .0410595{col 26}{space 2} .0197932{col 37}{space 1}    2.07{col 46}{space 3}0.038{col 54}{space 4} .0022541{col 67}{space 3} .0798648
+{txt}{space 3}20190603  {c |}{col 14}{res}{space 2} .0040725{col 26}{space 2} .0163145{col 37}{space 1}    0.25{col 46}{space 3}0.803{col 54}{space 4}-.0279128{col 67}{space 3} .0360579
+{txt}{space 3}20190604  {c |}{col 14}{res}{space 2} .0000284{col 26}{space 2}  .020975{col 37}{space 1}    0.00{col 46}{space 3}0.999{col 54}{space 4} -.041094{col 67}{space 3} .0411509
+{txt}{space 3}20190605  {c |}{col 14}{res}{space 2}-.0724367{col 26}{space 2} .0222799{col 37}{space 1}   -3.25{col 46}{space 3}0.001{col 54}{space 4}-.1161172{col 67}{space 3}-.0287561
+{txt}{space 3}20190606  {c |}{col 14}{res}{space 2} .0658312{col 26}{space 2} .0197153{col 37}{space 1}    3.34{col 46}{space 3}0.001{col 54}{space 4} .0271786{col 67}{space 3} .1044839
+{txt}{space 3}20190610  {c |}{col 14}{res}{space 2} .0255061{col 26}{space 2} .0179496{col 37}{space 1}    1.42{col 46}{space 3}0.155{col 54}{space 4}-.0096849{col 67}{space 3}  .060697
+{txt}{space 3}20190611  {c |}{col 14}{res}{space 2}-.0386132{col 26}{space 2} .0239068{col 37}{space 1}   -1.62{col 46}{space 3}0.106{col 54}{space 4}-.0854835{col 67}{space 3}  .008257
+{txt}{space 3}20190612  {c |}{col 14}{res}{space 2}-.0276285{col 26}{space 2} .0228747{col 37}{space 1}   -1.21{col 46}{space 3}0.227{col 54}{space 4}-.0724752{col 67}{space 3} .0172182
+{txt}{space 3}20190614  {c |}{col 14}{res}{space 2}-.0978891{col 26}{space 2} .0197244{col 37}{space 1}   -4.96{col 46}{space 3}0.000{col 54}{space 4}-.1365596{col 67}{space 3}-.0592186
+{txt}{space 3}20190618  {c |}{col 14}{res}{space 2}-.1141482{col 26}{space 2} .0176293{col 37}{space 1}   -6.47{col 46}{space 3}0.000{col 54}{space 4}-.1487112{col 67}{space 3}-.0795852
+{txt}{space 3}20190620  {c |}{col 14}{res}{space 2}-.0455108{col 26}{space 2}  .017872{col 37}{space 1}   -2.55{col 46}{space 3}0.011{col 54}{space 4}-.0805495{col 67}{space 3} -.010472
+{txt}{space 3}20190621  {c |}{col 14}{res}{space 2}-.1410409{col 26}{space 2} .0187179{col 37}{space 1}   -7.54{col 46}{space 3}0.000{col 54}{space 4}-.1777382{col 67}{space 3}-.1043436
+{txt}{space 3}20190624  {c |}{col 14}{res}{space 2}-.0210531{col 26}{space 2} .0159728{col 37}{space 1}   -1.32{col 46}{space 3}0.188{col 54}{space 4}-.0523684{col 67}{space 3} .0102622
+{txt}{space 3}20190625  {c |}{col 14}{res}{space 2} -.044322{col 26}{space 2} .0180095{col 37}{space 1}   -2.46{col 46}{space 3}0.014{col 54}{space 4}-.0796304{col 67}{space 3}-.0090136
+{txt}{space 3}20190626  {c |}{col 14}{res}{space 2}-.0566241{col 26}{space 2} .0177164{col 37}{space 1}   -3.20{col 46}{space 3}0.001{col 54}{space 4}-.0913579{col 67}{space 3}-.0218904
+{txt}{space 3}20190627  {c |}{col 14}{res}{space 2} -.044657{col 26}{space 2} .0160235{col 37}{space 1}   -2.79{col 46}{space 3}0.005{col 54}{space 4}-.0760718{col 67}{space 3}-.0132422
+{txt}{space 3}20190628  {c |}{col 14}{res}{space 2}-.0784697{col 26}{space 2} .0201976{col 37}{space 1}   -3.89{col 46}{space 3}0.000{col 54}{space 4}-.1180681{col 67}{space 3}-.0388714
+{txt}{space 3}20190701  {c |}{col 14}{res}{space 2}-.0682402{col 26}{space 2}  .020478{col 37}{space 1}   -3.33{col 46}{space 3}0.001{col 54}{space 4}-.1083881{col 67}{space 3}-.0280923
+{txt}{space 3}20190702  {c |}{col 14}{res}{space 2}-.0624618{col 26}{space 2} .0171494{col 37}{space 1}   -3.64{col 46}{space 3}0.000{col 54}{space 4}-.0960839{col 67}{space 3}-.0288398
+{txt}{space 3}20190703  {c |}{col 14}{res}{space 2} -.098485{col 26}{space 2} .0191271{col 37}{space 1}   -5.15{col 46}{space 3}0.000{col 54}{space 4}-.1359845{col 67}{space 3}-.0609856
+{txt}{space 3}20190704  {c |}{col 14}{res}{space 2}-.0787908{col 26}{space 2} .0168348{col 37}{space 1}   -4.68{col 46}{space 3}0.000{col 54}{space 4} -.111796{col 67}{space 3}-.0457855
+{txt}{space 3}20190708  {c |}{col 14}{res}{space 2}-.1183818{col 26}{space 2} .0182933{col 37}{space 1}   -6.47{col 46}{space 3}0.000{col 54}{space 4}-.1542467{col 67}{space 3} -.082517
+{txt}{space 3}20190709  {c |}{col 14}{res}{space 2}-.1327798{col 26}{space 2} .0171689{col 37}{space 1}   -7.73{col 46}{space 3}0.000{col 54}{space 4}-.1664402{col 67}{space 3}-.0991194
+{txt}{space 3}20190710  {c |}{col 14}{res}{space 2}-.1628624{col 26}{space 2} .0190609{col 37}{space 1}   -8.54{col 46}{space 3}0.000{col 54}{space 4}-.2002321{col 67}{space 3}-.1254927
+{txt}{space 3}20190711  {c |}{col 14}{res}{space 2}-.1007784{col 26}{space 2} .0215828{col 37}{space 1}   -4.67{col 46}{space 3}0.000{col 54}{space 4}-.1430924{col 67}{space 3}-.0584645
+{txt}{space 3}20190712  {c |}{col 14}{res}{space 2} -.130911{col 26}{space 2} .0201034{col 37}{space 1}   -6.51{col 46}{space 3}0.000{col 54}{space 4}-.1703246{col 67}{space 3}-.0914973
+{txt}{space 3}20190716  {c |}{col 14}{res}{space 2}-.1281779{col 26}{space 2} .0180439{col 37}{space 1}   -7.10{col 46}{space 3}0.000{col 54}{space 4}-.1635537{col 67}{space 3}-.0928021
+{txt}{space 3}20190717  {c |}{col 14}{res}{space 2} -.204826{col 26}{space 2}  .017799{col 37}{space 1}  -11.51{col 46}{space 3}0.000{col 54}{space 4}-.2397218{col 67}{space 3}-.1699303
+{txt}{space 3}20190718  {c |}{col 14}{res}{space 2}-.2343087{col 26}{space 2} .0193162{col 37}{space 1}  -12.13{col 46}{space 3}0.000{col 54}{space 4}-.2721789{col 67}{space 3}-.1964385
+{txt}{space 3}20190719  {c |}{col 14}{res}{space 2}-.0974964{col 26}{space 2} .0170662{col 37}{space 1}   -5.71{col 46}{space 3}0.000{col 54}{space 4}-.1309554{col 67}{space 3}-.0640374
+{txt}{space 3}20190722  {c |}{col 14}{res}{space 2}-.0994344{col 26}{space 2} .0185453{col 37}{space 1}   -5.36{col 46}{space 3}0.000{col 54}{space 4}-.1357933{col 67}{space 3}-.0630754
+{txt}{space 3}20190723  {c |}{col 14}{res}{space 2}-.0664003{col 26}{space 2} .0190811{col 37}{space 1}   -3.48{col 46}{space 3}0.001{col 54}{space 4}-.1038096{col 67}{space 3} -.028991
+{txt}{space 3}20190724  {c |}{col 14}{res}{space 2}-.1045984{col 26}{space 2} .0175032{col 37}{space 1}   -5.98{col 46}{space 3}0.000{col 54}{space 4}-.1389141{col 67}{space 3}-.0702826
+{txt}{space 3}20190725  {c |}{col 14}{res}{space 2}-.0421073{col 26}{space 2} .0178368{col 37}{space 1}   -2.36{col 46}{space 3}0.018{col 54}{space 4} -.077077{col 67}{space 3}-.0071376
+{txt}{space 3}20190726  {c |}{col 14}{res}{space 2}-.0471488{col 26}{space 2} .0189982{col 37}{space 1}   -2.48{col 46}{space 3}0.013{col 54}{space 4}-.0843956{col 67}{space 3}-.0099021
+{txt}{space 3}20190729  {c |}{col 14}{res}{space 2}-.0635205{col 26}{space 2} .0217174{col 37}{space 1}   -2.92{col 46}{space 3}0.003{col 54}{space 4}-.1060985{col 67}{space 3}-.0209426
+{txt}{space 3}20190730  {c |}{col 14}{res}{space 2}-.1412071{col 26}{space 2} .0295583{col 37}{space 1}   -4.78{col 46}{space 3}0.000{col 54}{space 4}-.1991574{col 67}{space 3}-.0832568
+{txt}{space 3}20190731  {c |}{col 14}{res}{space 2}-.1294101{col 26}{space 2} .0204281{col 37}{space 1}   -6.33{col 46}{space 3}0.000{col 54}{space 4}-.1694602{col 67}{space 3}-.0893599
+{txt}{space 3}20190801  {c |}{col 14}{res}{space 2}-.0909262{col 26}{space 2} .0214379{col 37}{space 1}   -4.24{col 46}{space 3}0.000{col 54}{space 4}-.1329562{col 67}{space 3}-.0488962
+{txt}{space 3}20190802  {c |}{col 14}{res}{space 2}-.2094351{col 26}{space 2} .0192361{col 37}{space 1}  -10.89{col 46}{space 3}0.000{col 54}{space 4}-.2471483{col 67}{space 3} -.171722
+{txt}{space 3}20190806  {c |}{col 14}{res}{space 2}-.1725475{col 26}{space 2} .0258901{col 37}{space 1}   -6.66{col 46}{space 3}0.000{col 54}{space 4}-.2233062{col 67}{space 3}-.1217889
+{txt}{space 3}20190807  {c |}{col 14}{res}{space 2}-.0576365{col 26}{space 2} .0222928{col 37}{space 1}   -2.59{col 46}{space 3}0.010{col 54}{space 4}-.1013424{col 67}{space 3}-.0139305
+{txt}{space 3}20190808  {c |}{col 14}{res}{space 2}-.0473554{col 26}{space 2} .0186336{col 37}{space 1}   -2.54{col 46}{space 3}0.011{col 54}{space 4}-.0838874{col 67}{space 3}-.0108234
+{txt}{space 3}20190809  {c |}{col 14}{res}{space 2}-.0703156{col 26}{space 2} .0206875{col 37}{space 1}   -3.40{col 46}{space 3}0.001{col 54}{space 4}-.1108744{col 67}{space 3}-.0297569
+{txt}{space 3}20190813  {c |}{col 14}{res}{space 2}-.1086958{col 26}{space 2} .0175902{col 37}{space 1}   -6.18{col 46}{space 3}0.000{col 54}{space 4} -.143182{col 67}{space 3}-.0742096
+{txt}{space 3}20190814  {c |}{col 14}{res}{space 2}-.0484201{col 26}{space 2} .0192817{col 37}{space 1}   -2.51{col 46}{space 3}0.012{col 54}{space 4}-.0862226{col 67}{space 3}-.0106176
+{txt}{space 3}20190816  {c |}{col 14}{res}{space 2}-.0404115{col 26}{space 2}  .019963{col 37}{space 1}   -2.02{col 46}{space 3}0.043{col 54}{space 4}-.0795497{col 67}{space 3}-.0012732
+{txt}{space 3}20190819  {c |}{col 14}{res}{space 2}-.0284869{col 26}{space 2} .0200305{col 37}{space 1}   -1.42{col 46}{space 3}0.155{col 54}{space 4}-.0677576{col 67}{space 3} .0107837
+{txt}{space 3}20190820  {c |}{col 14}{res}{space 2} .0161853{col 26}{space 2} .0194963{col 37}{space 1}    0.83{col 46}{space 3}0.406{col 54}{space 4}-.0220381{col 67}{space 3} .0544087
+{txt}{space 3}20190821  {c |}{col 14}{res}{space 2} .0343097{col 26}{space 2} .0194311{col 37}{space 1}    1.77{col 46}{space 3}0.078{col 54}{space 4}-.0037858{col 67}{space 3} .0724052
+{txt}{space 3}20190822  {c |}{col 14}{res}{space 2}-.0238876{col 26}{space 2} .0194098{col 37}{space 1}   -1.23{col 46}{space 3}0.219{col 54}{space 4}-.0619414{col 67}{space 3} .0141663
+{txt}{space 3}20190823  {c |}{col 14}{res}{space 2}-.0024911{col 26}{space 2} .0202728{col 37}{space 1}   -0.12{col 46}{space 3}0.902{col 54}{space 4}-.0422367{col 67}{space 3} .0372545
+{txt}{space 3}20190826  {c |}{col 14}{res}{space 2}  -.09386{col 26}{space 2}  .020484{col 37}{space 1}   -4.58{col 46}{space 3}0.000{col 54}{space 4}-.1340196{col 67}{space 3}-.0537003
+{txt}{space 3}20190827  {c |}{col 14}{res}{space 2}-.0436552{col 26}{space 2} .0195934{col 37}{space 1}   -2.23{col 46}{space 3}0.026{col 54}{space 4}-.0820688{col 67}{space 3}-.0052415
+{txt}{space 3}20190828  {c |}{col 14}{res}{space 2}-.0455128{col 26}{space 2} .0212445{col 37}{space 1}   -2.14{col 46}{space 3}0.032{col 54}{space 4}-.0871635{col 67}{space 3}-.0038621
+{txt}{space 3}20190829  {c |}{col 14}{res}{space 2}-.0667075{col 26}{space 2} .0194486{col 37}{space 1}   -3.43{col 46}{space 3}0.001{col 54}{space 4}-.1048374{col 67}{space 3}-.0285776
+{txt}{space 3}20190830  {c |}{col 14}{res}{space 2}-.0477576{col 26}{space 2} .0209138{col 37}{space 1}   -2.28{col 46}{space 3}0.022{col 54}{space 4}  -.08876{col 67}{space 3}-.0067552
+{txt}{space 3}20190903  {c |}{col 14}{res}{space 2}-.0194713{col 26}{space 2} .0168866{col 37}{space 1}   -1.15{col 46}{space 3}0.249{col 54}{space 4}-.0525783{col 67}{space 3} .0136357
+{txt}{space 3}20190904  {c |}{col 14}{res}{space 2}-.0483784{col 26}{space 2}  .020229{col 37}{space 1}   -2.39{col 46}{space 3}0.017{col 54}{space 4}-.0880382{col 67}{space 3}-.0087187
+{txt}{space 3}20190905  {c |}{col 14}{res}{space 2}-.1237869{col 26}{space 2} .0203433{col 37}{space 1}   -6.08{col 46}{space 3}0.000{col 54}{space 4}-.1636708{col 67}{space 3}-.0839029
+{txt}{space 3}20190906  {c |}{col 14}{res}{space 2} -.040389{col 26}{space 2} .0195188{col 37}{space 1}   -2.07{col 46}{space 3}0.039{col 54}{space 4}-.0786564{col 67}{space 3}-.0021217
+{txt}{space 3}20190909  {c |}{col 14}{res}{space 2}-.0743814{col 26}{space 2} .0179361{col 37}{space 1}   -4.15{col 46}{space 3}0.000{col 54}{space 4}-.1095459{col 67}{space 3}-.0392169
+{txt}{space 3}20190910  {c |}{col 14}{res}{space 2}-.0486004{col 26}{space 2} .0214061{col 37}{space 1}   -2.27{col 46}{space 3}0.023{col 54}{space 4}-.0905679{col 67}{space 3}-.0066328
+{txt}{space 3}20190911  {c |}{col 14}{res}{space 2}-.1501629{col 26}{space 2} .0196608{col 37}{space 1}   -7.64{col 46}{space 3}0.000{col 54}{space 4}-.1887087{col 67}{space 3}-.1116171
+{txt}{space 3}20190912  {c |}{col 14}{res}{space 2}-.1381388{col 26}{space 2} .0223154{col 37}{space 1}   -6.19{col 46}{space 3}0.000{col 54}{space 4} -.181889{col 67}{space 3}-.0943885
+{txt}{space 3}20190913  {c |}{col 14}{res}{space 2} -.225115{col 26}{space 2} .0192562{col 37}{space 1}  -11.69{col 46}{space 3}0.000{col 54}{space 4}-.2628676{col 67}{space 3}-.1873624
+{txt}{space 3}20190917  {c |}{col 14}{res}{space 2}-.1348787{col 26}{space 2} .0201539{col 37}{space 1}   -6.69{col 46}{space 3}0.000{col 54}{space 4}-.1743912{col 67}{space 3}-.0953662
+{txt}{space 3}20190918  {c |}{col 14}{res}{space 2}-.1282224{col 26}{space 2} .0175151{col 37}{space 1}   -7.32{col 46}{space 3}0.000{col 54}{space 4}-.1625615{col 67}{space 3}-.0938834
+{txt}{space 3}20190919  {c |}{col 14}{res}{space 2} -.134521{col 26}{space 2} .0184286{col 37}{space 1}   -7.30{col 46}{space 3}0.000{col 54}{space 4}-.1706511{col 67}{space 3}-.0983909
+{txt}{space 3}20190920  {c |}{col 14}{res}{space 2}-.1284511{col 26}{space 2} .0220203{col 37}{space 1}   -5.83{col 46}{space 3}0.000{col 54}{space 4}-.1716228{col 67}{space 3}-.0852793
+{txt}{space 3}20190924  {c |}{col 14}{res}{space 2}-.1309466{col 26}{space 2} .0174335{col 37}{space 1}   -7.51{col 46}{space 3}0.000{col 54}{space 4}-.1651257{col 67}{space 3}-.0967675
+{txt}{space 3}20190925  {c |}{col 14}{res}{space 2}-.1016351{col 26}{space 2} .0204393{col 37}{space 1}   -4.97{col 46}{space 3}0.000{col 54}{space 4}-.1417071{col 67}{space 3} -.061563
+{txt}{space 3}20190926  {c |}{col 14}{res}{space 2}-.2305864{col 26}{space 2} .0208998{col 37}{space 1}  -11.03{col 46}{space 3}0.000{col 54}{space 4}-.2715613{col 67}{space 3}-.1896114
+{txt}{space 3}20190927  {c |}{col 14}{res}{space 2} -.207534{col 26}{space 2} .0200354{col 37}{space 1}  -10.36{col 46}{space 3}0.000{col 54}{space 4}-.2468143{col 67}{space 3}-.1682537
+{txt}{space 3}20191001  {c |}{col 14}{res}{space 2}-.1139176{col 26}{space 2}  .017963{col 37}{space 1}   -6.34{col 46}{space 3}0.000{col 54}{space 4}-.1491348{col 67}{space 3}-.0787003
+{txt}{space 3}20191002  {c |}{col 14}{res}{space 2}-.1341187{col 26}{space 2} .0202295{col 37}{space 1}   -6.63{col 46}{space 3}0.000{col 54}{space 4}-.1737796{col 67}{space 3}-.0944579
+{txt}{space 3}20191004  {c |}{col 14}{res}{space 2}-.0754585{col 26}{space 2}  .020679{col 37}{space 1}   -3.65{col 46}{space 3}0.000{col 54}{space 4}-.1160006{col 67}{space 3}-.0349164
+{txt}{space 3}20191007  {c |}{col 14}{res}{space 2}-.1061071{col 26}{space 2} .0179591{col 37}{space 1}   -5.91{col 46}{space 3}0.000{col 54}{space 4}-.1413167{col 67}{space 3}-.0708976
+{txt}{space 3}20191008  {c |}{col 14}{res}{space 2}-.1426926{col 26}{space 2} .0167271{col 37}{space 1}   -8.53{col 46}{space 3}0.000{col 54}{space 4}-.1754869{col 67}{space 3}-.1098984
+{txt}{space 3}20191009  {c |}{col 14}{res}{space 2}-.1110132{col 26}{space 2} .0174217{col 37}{space 1}   -6.37{col 46}{space 3}0.000{col 54}{space 4}-.1451691{col 67}{space 3}-.0768572
+{txt}{space 3}20191010  {c |}{col 14}{res}{space 2}-.0954616{col 26}{space 2} .0194101{col 37}{space 1}   -4.92{col 46}{space 3}0.000{col 54}{space 4} -.133516{col 67}{space 3}-.0574073
+{txt}{space 3}20191015  {c |}{col 14}{res}{space 2}-.2035855{col 26}{space 2} .0192597{col 37}{space 1}  -10.57{col 46}{space 3}0.000{col 54}{space 4}-.2413449{col 67}{space 3}-.1658261
+{txt}{space 3}20191016  {c |}{col 14}{res}{space 2}-.1412251{col 26}{space 2} .0215249{col 37}{space 1}   -6.56{col 46}{space 3}0.000{col 54}{space 4}-.1834255{col 67}{space 3}-.0990247
+{txt}{space 3}20191017  {c |}{col 14}{res}{space 2}-.1628998{col 26}{space 2} .0201834{col 37}{space 1}   -8.07{col 46}{space 3}0.000{col 54}{space 4}-.2024702{col 67}{space 3}-.1233294
+{txt}{space 3}20191021  {c |}{col 14}{res}{space 2}-.0685488{col 26}{space 2} .0227012{col 37}{space 1}   -3.02{col 46}{space 3}0.003{col 54}{space 4}-.1130555{col 67}{space 3}-.0240422
+{txt}{space 3}20191023  {c |}{col 14}{res}{space 2}-.1029126{col 26}{space 2} .0180177{col 37}{space 1}   -5.71{col 46}{space 3}0.000{col 54}{space 4} -.138237{col 67}{space 3}-.0675883
+{txt}{space 3}20191025  {c |}{col 14}{res}{space 2}-.1817407{col 26}{space 2} .0165571{col 37}{space 1}  -10.98{col 46}{space 3}0.000{col 54}{space 4}-.2142016{col 67}{space 3}-.1492797
+{txt}{space 3}20191028  {c |}{col 14}{res}{space 2}-.1724508{col 26}{space 2} .0196271{col 37}{space 1}   -8.79{col 46}{space 3}0.000{col 54}{space 4}-.2109306{col 67}{space 3}-.1339711
+{txt}{space 3}20191029  {c |}{col 14}{res}{space 2}-.2111514{col 26}{space 2} .0174079{col 37}{space 1}  -12.13{col 46}{space 3}0.000{col 54}{space 4}-.2452804{col 67}{space 3}-.1770224
+{txt}{space 3}20191030  {c |}{col 14}{res}{space 2}-.4099346{col 26}{space 2}  .019457{col 37}{space 1}  -21.07{col 46}{space 3}0.000{col 54}{space 4}-.4480809{col 67}{space 3}-.3717883
+{txt}{space 3}20191031  {c |}{col 14}{res}{space 2}-.1870444{col 26}{space 2} .0210169{col 37}{space 1}   -8.90{col 46}{space 3}0.000{col 54}{space 4}-.2282489{col 67}{space 3}  -.14584
+{txt}{space 12} {c |}
+{space 7}_cons {c |}{col 14}{res}{space 2}-4.951089{col 26}{space 2} .0137733{col 37}{space 1} -359.47{col 46}{space 3}0.000{col 54}{space 4}-4.978092{col 67}{space 3}-4.924086
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. 
+. areg logtw20size logw1dbw1, absorb(ticker) cluster(newgroup) // -.7720191
+
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:ticker}{col 49}No. of categories{col 67}= {res}     2,644
+{txt}{col 49}F({res}   1{txt},{res}   4107{txt}){col 67}= {res} 198336.34
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.9812
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.9810
+{txt}{col 49}Root MSE{col 67}= {res}    0.3075
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1} logtw20size{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2}-.7722008{col 26}{space 2} .0017339{col 37}{space 1} -445.35{col 46}{space 3}0.000{col 54}{space 4}-.7756002{col 67}{space 3}-.7688014
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2}-6.153246{col 26}{space 2} .0022954{col 37}{space 1}-2680.67{col 46}{space 3}0.000{col 54}{space 4}-6.157746{col 67}{space 3}-6.148746
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. areg logtw20size logw1dbw1, absorb(date) cluster(newgroup) // -.7936087
+
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:date}{col 49}No. of categories{col 67}= {res}       125
+{txt}{col 49}F({res}   1{txt},{res}   4107{txt}){col 67}= {res} 389301.99
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.8564
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.8564
+{txt}{col 49}Root MSE{col 67}= {res}    0.8456
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1} logtw20size{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2} -.793634{col 26}{space 2}  .001272{col 37}{space 1} -623.94{col 46}{space 3}0.000{col 54}{space 4}-.7961277{col 67}{space 3}-.7911402
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2}-6.152308{col 26}{space 2} .0034841{col 37}{space 1}-1765.81{col 46}{space 3}0.000{col 54}{space 4}-6.159139{col 67}{space 3}-6.145478
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. areg logtw20size logw1dbw1 i.date, absorb(ticker) cluster(newgroup) // -.7648057
+{res}
+{txt}Linear regression, absorbing indicators{col 49}Number of obs{col 67}= {res}   318,871
+{txt}Absorbed variable: {bf:ticker}{col 49}No. of categories{col 67}= {res}     2,644
+{txt}{col 49}F({res} 125{txt},{res}   4107{txt}){col 67}= {res}   2309.80
+{txt}{col 49}Prob > F{col 67}= {res}    0.0000
+{txt}{col 49}R-squared{col 67}= {res}    0.9830
+{txt}{col 49}Adj R-squared{col 67}= {res}    0.9829
+{txt}{col 49}Root MSE{col 67}= {res}    0.2919
+
+{txt}{ralign 78:(Std. Err. adjusted for {res:4,108} clusters in newgroup)}
+{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1} logtw20size{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 3}logw1dbw1 {c |}{col 14}{res}{space 2}-.7650266{col 26}{space 2} .0016035{col 37}{space 1} -477.09{col 46}{space 3}0.000{col 54}{space 4}-.7681704{col 67}{space 3}-.7618828
+{txt}{space 12} {c |}
+{space 8}date {c |}
+{space 3}20190402  {c |}{col 14}{res}{space 2} .0624955{col 26}{space 2} .0166365{col 37}{space 1}    3.76{col 46}{space 3}0.000{col 54}{space 4} .0298789{col 67}{space 3} .0951122
+{txt}{space 3}20190403  {c |}{col 14}{res}{space 2} .0713778{col 26}{space 2} .0145534{col 37}{space 1}    4.90{col 46}{space 3}0.000{col 54}{space 4} .0428453{col 67}{space 3} .0999103
+{txt}{space 3}20190404  {c |}{col 14}{res}{space 2} .1099532{col 26}{space 2} .0155223{col 37}{space 1}    7.08{col 46}{space 3}0.000{col 54}{space 4}  .079521{col 67}{space 3} .1403854
+{txt}{space 3}20190405  {c |}{col 14}{res}{space 2} .1172598{col 26}{space 2} .0155614{col 37}{space 1}    7.54{col 46}{space 3}0.000{col 54}{space 4}  .086751{col 67}{space 3} .1477685
+{txt}{space 3}20190408  {c |}{col 14}{res}{space 2} .0917428{col 26}{space 2} .0176309{col 37}{space 1}    5.20{col 46}{space 3}0.000{col 54}{space 4} .0571766{col 67}{space 3}  .126309
+{txt}{space 3}20190409  {c |}{col 14}{res}{space 2} .0668296{col 26}{space 2} .0161292{col 37}{space 1}    4.14{col 46}{space 3}0.000{col 54}{space 4} .0352077{col 67}{space 3} .0984516
+{txt}{space 3}20190410  {c |}{col 14}{res}{space 2} .0844047{col 26}{space 2} .0165615{col 37}{space 1}    5.10{col 46}{space 3}0.000{col 54}{space 4} .0519352{col 67}{space 3} .1168742
+{txt}{space 3}20190411  {c |}{col 14}{res}{space 2} .0848779{col 26}{space 2} .0176408{col 37}{space 1}    4.81{col 46}{space 3}0.000{col 54}{space 4} .0502925{col 67}{space 3} .1194633
+{txt}{space 3}20190412  {c |}{col 14}{res}{space 2} .0671139{col 26}{space 2} .0161962{col 37}{space 1}    4.14{col 46}{space 3}0.000{col 54}{space 4} .0353605{col 67}{space 3} .0988674
+{txt}{space 3}20190415  {c |}{col 14}{res}{space 2}-.0022325{col 26}{space 2} .0142063{col 37}{space 1}   -0.16{col 46}{space 3}0.875{col 54}{space 4}-.0300846{col 67}{space 3} .0256196
+{txt}{space 3}20190416  {c |}{col 14}{res}{space 2} .0853616{col 26}{space 2} .0183962{col 37}{space 1}    4.64{col 46}{space 3}0.000{col 54}{space 4} .0492951{col 67}{space 3} .1214281
+{txt}{space 3}20190418  {c |}{col 14}{res}{space 2} .0347792{col 26}{space 2} .0184433{col 37}{space 1}    1.89{col 46}{space 3}0.059{col 54}{space 4}-.0013797{col 67}{space 3} .0709381
+{txt}{space 3}20190422  {c |}{col 14}{res}{space 2} .1202653{col 26}{space 2} .0161141{col 37}{space 1}    7.46{col 46}{space 3}0.000{col 54}{space 4} .0886729{col 67}{space 3} .1518577
+{txt}{space 3}20190423  {c |}{col 14}{res}{space 2} .0514067{col 26}{space 2} .0152163{col 37}{space 1}    3.38{col 46}{space 3}0.001{col 54}{space 4} .0215745{col 67}{space 3} .0812389
+{txt}{space 3}20190424  {c |}{col 14}{res}{space 2}-.0407581{col 26}{space 2} .0148159{col 37}{space 1}   -2.75{col 46}{space 3}0.006{col 54}{space 4}-.0698052{col 67}{space 3} -.011711
+{txt}{space 3}20190425  {c |}{col 14}{res}{space 2}-.0703009{col 26}{space 2} .0153658{col 37}{space 1}   -4.58{col 46}{space 3}0.000{col 54}{space 4}-.1004262{col 67}{space 3}-.0401757
+{txt}{space 3}20190426  {c |}{col 14}{res}{space 2}-.0966436{col 26}{space 2} .0153095{col 37}{space 1}   -6.31{col 46}{space 3}0.000{col 54}{space 4}-.1266584{col 67}{space 3}-.0666288
+{txt}{space 3}20190507  {c |}{col 14}{res}{space 2}-.3065397{col 26}{space 2} .0145061{col 37}{space 1}  -21.13{col 46}{space 3}0.000{col 54}{space 4}-.3349795{col 67}{space 3}   -.2781
+{txt}{space 3}20190508  {c |}{col 14}{res}{space 2}-.2867064{col 26}{space 2} .0124206{col 37}{space 1}  -23.08{col 46}{space 3}0.000{col 54}{space 4}-.3110575{col 67}{space 3}-.2623554
+{txt}{space 3}20190509  {c |}{col 14}{res}{space 2}-.2833832{col 26}{space 2} .0129968{col 37}{space 1}  -21.80{col 46}{space 3}0.000{col 54}{space 4} -.308864{col 67}{space 3}-.2579023
+{txt}{space 3}20190510  {c |}{col 14}{res}{space 2}-.2437689{col 26}{space 2} .0123379{col 37}{space 1}  -19.76{col 46}{space 3}0.000{col 54}{space 4}-.2679579{col 67}{space 3}-.2195799
+{txt}{space 3}20190513  {c |}{col 14}{res}{space 2} -.195416{col 26}{space 2} .0106149{col 37}{space 1}  -18.41{col 46}{space 3}0.000{col 54}{space 4}-.2162269{col 67}{space 3}-.1746051
+{txt}{space 3}20190514  {c |}{col 14}{res}{space 2}-.2243422{col 26}{space 2} .0112743{col 37}{space 1}  -19.90{col 46}{space 3}0.000{col 54}{space 4} -.246446{col 67}{space 3}-.2022384
+{txt}{space 3}20190515  {c |}{col 14}{res}{space 2}-.1444103{col 26}{space 2} .0122035{col 37}{space 1}  -11.83{col 46}{space 3}0.000{col 54}{space 4}-.1683356{col 67}{space 3}-.1204849
+{txt}{space 3}20190516  {c |}{col 14}{res}{space 2}-.0945486{col 26}{space 2} .0118599{col 37}{space 1}   -7.97{col 46}{space 3}0.000{col 54}{space 4}-.1178005{col 67}{space 3}-.0712966
+{txt}{space 3}20190517  {c |}{col 14}{res}{space 2}-.0626507{col 26}{space 2} .0133029{col 37}{space 1}   -4.71{col 46}{space 3}0.000{col 54}{space 4}-.0887317{col 67}{space 3}-.0365697
+{txt}{space 3}20190520  {c |}{col 14}{res}{space 2}-.0124281{col 26}{space 2}  .012299{col 37}{space 1}   -1.01{col 46}{space 3}0.312{col 54}{space 4}-.0365408{col 67}{space 3} .0116845
+{txt}{space 3}20190521  {c |}{col 14}{res}{space 2}-.0201186{col 26}{space 2} .0117552{col 37}{space 1}   -1.71{col 46}{space 3}0.087{col 54}{space 4}-.0431652{col 67}{space 3} .0029281
+{txt}{space 3}20190522  {c |}{col 14}{res}{space 2} .0121283{col 26}{space 2} .0127096{col 37}{space 1}    0.95{col 46}{space 3}0.340{col 54}{space 4}-.0127894{col 67}{space 3} .0370461
+{txt}{space 3}20190523  {c |}{col 14}{res}{space 2}-.0023807{col 26}{space 2} .0122373{col 37}{space 1}   -0.19{col 46}{space 3}0.846{col 54}{space 4}-.0263725{col 67}{space 3} .0216111
+{txt}{space 3}20190524  {c |}{col 14}{res}{space 2}-.0159247{col 26}{space 2} .0154153{col 37}{space 1}   -1.03{col 46}{space 3}0.302{col 54}{space 4}-.0461471{col 67}{space 3} .0142976
+{txt}{space 3}20190529  {c |}{col 14}{res}{space 2}-.0046752{col 26}{space 2} .0158938{col 37}{space 1}   -0.29{col 46}{space 3}0.769{col 54}{space 4}-.0358358{col 67}{space 3} .0264853
+{txt}{space 3}20190530  {c |}{col 14}{res}{space 2}  .045359{col 26}{space 2} .0133148{col 37}{space 1}    3.41{col 46}{space 3}0.001{col 54}{space 4} .0192548{col 67}{space 3} .0714631
+{txt}{space 3}20190531  {c |}{col 14}{res}{space 2} .0320877{col 26}{space 2} .0126557{col 37}{space 1}    2.54{col 46}{space 3}0.011{col 54}{space 4} .0072757{col 67}{space 3} .0568997
+{txt}{space 3}20190603  {c |}{col 14}{res}{space 2} .0162275{col 26}{space 2} .0115847{col 37}{space 1}    1.40{col 46}{space 3}0.161{col 54}{space 4}-.0064848{col 67}{space 3} .0389397
+{txt}{space 3}20190604  {c |}{col 14}{res}{space 2} .0651537{col 26}{space 2} .0122968{col 37}{space 1}    5.30{col 46}{space 3}0.000{col 54}{space 4} .0410453{col 67}{space 3} .0892622
+{txt}{space 3}20190605  {c |}{col 14}{res}{space 2} .0507573{col 26}{space 2} .0137382{col 37}{space 1}    3.69{col 46}{space 3}0.000{col 54}{space 4}  .023823{col 67}{space 3} .0776917
+{txt}{space 3}20190606  {c |}{col 14}{res}{space 2} .1267494{col 26}{space 2} .0119181{col 37}{space 1}   10.64{col 46}{space 3}0.000{col 54}{space 4} .1033834{col 67}{space 3} .1501154
+{txt}{space 3}20190610  {c |}{col 14}{res}{space 2} .0576154{col 26}{space 2} .0127869{col 37}{space 1}    4.51{col 46}{space 3}0.000{col 54}{space 4} .0325461{col 67}{space 3} .0826847
+{txt}{space 3}20190611  {c |}{col 14}{res}{space 2} .0452003{col 26}{space 2}  .013397{col 37}{space 1}    3.37{col 46}{space 3}0.001{col 54}{space 4}  .018935{col 67}{space 3} .0714656
+{txt}{space 3}20190612  {c |}{col 14}{res}{space 2} .0343427{col 26}{space 2} .0123494{col 37}{space 1}    2.78{col 46}{space 3}0.005{col 54}{space 4} .0101312{col 67}{space 3} .0585542
+{txt}{space 3}20190614  {c |}{col 14}{res}{space 2}-.0376489{col 26}{space 2} .0137131{col 37}{space 1}   -2.75{col 46}{space 3}0.006{col 54}{space 4}-.0645341{col 67}{space 3}-.0107637
+{txt}{space 3}20190618  {c |}{col 14}{res}{space 2}-.0673356{col 26}{space 2} .0121334{col 37}{space 1}   -5.55{col 46}{space 3}0.000{col 54}{space 4}-.0911237{col 67}{space 3}-.0435476
+{txt}{space 3}20190620  {c |}{col 14}{res}{space 2}-.0063308{col 26}{space 2} .0109505{col 37}{space 1}   -0.58{col 46}{space 3}0.563{col 54}{space 4}-.0277996{col 67}{space 3} .0151381
+{txt}{space 3}20190621  {c |}{col 14}{res}{space 2}-.0959007{col 26}{space 2} .0135725{col 37}{space 1}   -7.07{col 46}{space 3}0.000{col 54}{space 4}-.1225101{col 67}{space 3}-.0692913
+{txt}{space 3}20190624  {c |}{col 14}{res}{space 2} .0139971{col 26}{space 2}  .010322{col 37}{space 1}    1.36{col 46}{space 3}0.175{col 54}{space 4}-.0062396{col 67}{space 3} .0342338
+{txt}{space 3}20190625  {c |}{col 14}{res}{space 2}-.0295272{col 26}{space 2} .0109713{col 37}{space 1}   -2.69{col 46}{space 3}0.007{col 54}{space 4}-.0510369{col 67}{space 3}-.0080175
+{txt}{space 3}20190626  {c |}{col 14}{res}{space 2}-.0296352{col 26}{space 2} .0099506{col 37}{space 1}   -2.98{col 46}{space 3}0.003{col 54}{space 4}-.0491438{col 67}{space 3}-.0101267
+{txt}{space 3}20190627  {c |}{col 14}{res}{space 2}-.0245373{col 26}{space 2} .0107975{col 37}{space 1}   -2.27{col 46}{space 3}0.023{col 54}{space 4}-.0457062{col 67}{space 3}-.0033684
+{txt}{space 3}20190628  {c |}{col 14}{res}{space 2}-.0478515{col 26}{space 2} .0127239{col 37}{space 1}   -3.76{col 46}{space 3}0.000{col 54}{space 4}-.0727971{col 67}{space 3}-.0229058
+{txt}{space 3}20190701  {c |}{col 14}{res}{space 2}-.0826356{col 26}{space 2} .0112783{col 37}{space 1}   -7.33{col 46}{space 3}0.000{col 54}{space 4}-.1047472{col 67}{space 3} -.060524
+{txt}{space 3}20190702  {c |}{col 14}{res}{space 2}-.0342562{col 26}{space 2} .0095386{col 37}{space 1}   -3.59{col 46}{space 3}0.000{col 54}{space 4} -.052957{col 67}{space 3}-.0155554
+{txt}{space 3}20190703  {c |}{col 14}{res}{space 2}-.0342004{col 26}{space 2} .0114657{col 37}{space 1}   -2.98{col 46}{space 3}0.003{col 54}{space 4}-.0566795{col 67}{space 3}-.0117213
+{txt}{space 3}20190704  {c |}{col 14}{res}{space 2}-.0343813{col 26}{space 2} .0120793{col 37}{space 1}   -2.85{col 46}{space 3}0.004{col 54}{space 4}-.0580632{col 67}{space 3}-.0106995
+{txt}{space 3}20190708  {c |}{col 14}{res}{space 2}-.0626024{col 26}{space 2} .0115754{col 37}{space 1}   -5.41{col 46}{space 3}0.000{col 54}{space 4}-.0852964{col 67}{space 3}-.0399084
+{txt}{space 3}20190709  {c |}{col 14}{res}{space 2}-.0634523{col 26}{space 2} .0112486{col 37}{space 1}   -5.64{col 46}{space 3}0.000{col 54}{space 4}-.0855056{col 67}{space 3} -.041399
+{txt}{space 3}20190710  {c |}{col 14}{res}{space 2}-.1025082{col 26}{space 2} .0114118{col 37}{space 1}   -8.98{col 46}{space 3}0.000{col 54}{space 4}-.1248816{col 67}{space 3}-.0801348
+{txt}{space 3}20190711  {c |}{col 14}{res}{space 2} -.052258{col 26}{space 2} .0117356{col 37}{space 1}   -4.45{col 46}{space 3}0.000{col 54}{space 4}-.0752661{col 67}{space 3}  -.02925
+{txt}{space 3}20190712  {c |}{col 14}{res}{space 2}-.0617313{col 26}{space 2} .0099988{col 37}{space 1}   -6.17{col 46}{space 3}0.000{col 54}{space 4}-.0813344{col 67}{space 3}-.0421282
+{txt}{space 3}20190716  {c |}{col 14}{res}{space 2}-.0781053{col 26}{space 2} .0117607{col 37}{space 1}   -6.64{col 46}{space 3}0.000{col 54}{space 4}-.1011626{col 67}{space 3} -.055048
+{txt}{space 3}20190717  {c |}{col 14}{res}{space 2}-.0945577{col 26}{space 2} .0108373{col 37}{space 1}   -8.73{col 46}{space 3}0.000{col 54}{space 4}-.1158048{col 67}{space 3}-.0733107
+{txt}{space 3}20190718  {c |}{col 14}{res}{space 2}-.2126888{col 26}{space 2} .0138513{col 37}{space 1}  -15.36{col 46}{space 3}0.000{col 54}{space 4}-.2398449{col 67}{space 3}-.1855328
+{txt}{space 3}20190719  {c |}{col 14}{res}{space 2}-.0866434{col 26}{space 2} .0119883{col 37}{space 1}   -7.23{col 46}{space 3}0.000{col 54}{space 4} -.110147{col 67}{space 3}-.0631398
+{txt}{space 3}20190722  {c |}{col 14}{res}{space 2}-.0385743{col 26}{space 2}  .011053{col 37}{space 1}   -3.49{col 46}{space 3}0.000{col 54}{space 4}-.0602442{col 67}{space 3}-.0169044
+{txt}{space 3}20190723  {c |}{col 14}{res}{space 2}-.0359007{col 26}{space 2} .0126378{col 37}{space 1}   -2.84{col 46}{space 3}0.005{col 54}{space 4}-.0606777{col 67}{space 3}-.0111238
+{txt}{space 3}20190724  {c |}{col 14}{res}{space 2}-.0494699{col 26}{space 2} .0125643{col 37}{space 1}   -3.94{col 46}{space 3}0.000{col 54}{space 4}-.0741028{col 67}{space 3} -.024837
+{txt}{space 3}20190725  {c |}{col 14}{res}{space 2}-.0454967{col 26}{space 2} .0132575{col 37}{space 1}   -3.43{col 46}{space 3}0.001{col 54}{space 4}-.0714885{col 67}{space 3}-.0195049
+{txt}{space 3}20190726  {c |}{col 14}{res}{space 2}-.0503768{col 26}{space 2} .0116967{col 37}{space 1}   -4.31{col 46}{space 3}0.000{col 54}{space 4}-.0733087{col 67}{space 3}-.0274449
+{txt}{space 3}20190729  {c |}{col 14}{res}{space 2}-.0497156{col 26}{space 2} .0124321{col 37}{space 1}   -4.00{col 46}{space 3}0.000{col 54}{space 4}-.0740893{col 67}{space 3}-.0253418
+{txt}{space 3}20190730  {c |}{col 14}{res}{space 2}-.1478937{col 26}{space 2} .0130632{col 37}{space 1}  -11.32{col 46}{space 3}0.000{col 54}{space 4}-.1735046{col 67}{space 3}-.1222828
+{txt}{space 3}20190731  {c |}{col 14}{res}{space 2} -.139457{col 26}{space 2} .0129235{col 37}{space 1}  -10.79{col 46}{space 3}0.000{col 54}{space 4}-.1647939{col 67}{space 3}  -.11412
+{txt}{space 3}20190801  {c |}{col 14}{res}{space 2}-.1044537{col 26}{space 2} .0130442{col 37}{space 1}   -8.01{col 46}{space 3}0.000{col 54}{space 4}-.1300274{col 67}{space 3}-.0788799
+{txt}{space 3}20190802  {c |}{col 14}{res}{space 2}-.2209253{col 26}{space 2}  .014642{col 37}{space 1}  -15.09{col 46}{space 3}0.000{col 54}{space 4}-.2496316{col 67}{space 3}-.1922191
+{txt}{space 3}20190806  {c |}{col 14}{res}{space 2}-.1614194{col 26}{space 2} .0112655{col 37}{space 1}  -14.33{col 46}{space 3}0.000{col 54}{space 4}-.1835059{col 67}{space 3}-.1393329
+{txt}{space 3}20190807  {c |}{col 14}{res}{space 2}-.0687527{col 26}{space 2} .0111114{col 37}{space 1}   -6.19{col 46}{space 3}0.000{col 54}{space 4}-.0905372{col 67}{space 3}-.0469683
+{txt}{space 3}20190808  {c |}{col 14}{res}{space 2}-.0406973{col 26}{space 2} .0117867{col 37}{space 1}   -3.45{col 46}{space 3}0.001{col 54}{space 4}-.0638055{col 67}{space 3} -.017589
+{txt}{space 3}20190809  {c |}{col 14}{res}{space 2}-.0337948{col 26}{space 2}  .011383{col 37}{space 1}   -2.97{col 46}{space 3}0.003{col 54}{space 4}-.0561117{col 67}{space 3} -.011478
+{txt}{space 3}20190813  {c |}{col 14}{res}{space 2}-.0868824{col 26}{space 2}  .012073{col 37}{space 1}   -7.20{col 46}{space 3}0.000{col 54}{space 4}-.1105519{col 67}{space 3}-.0632128
+{txt}{space 3}20190814  {c |}{col 14}{res}{space 2}-.0151953{col 26}{space 2} .0131924{col 37}{space 1}   -1.15{col 46}{space 3}0.249{col 54}{space 4}-.0410595{col 67}{space 3} .0106688
+{txt}{space 3}20190816  {c |}{col 14}{res}{space 2} .0075906{col 26}{space 2} .0133957{col 37}{space 1}    0.57{col 46}{space 3}0.571{col 54}{space 4}-.0186722{col 67}{space 3} .0338533
+{txt}{space 3}20190819  {c |}{col 14}{res}{space 2} .0066834{col 26}{space 2} .0152259{col 37}{space 1}    0.44{col 46}{space 3}0.661{col 54}{space 4}-.0231675{col 67}{space 3} .0365344
+{txt}{space 3}20190820  {c |}{col 14}{res}{space 2}  .011569{col 26}{space 2} .0154935{col 37}{space 1}    0.75{col 46}{space 3}0.455{col 54}{space 4}-.0188067{col 67}{space 3} .0419446
+{txt}{space 3}20190821  {c |}{col 14}{res}{space 2} .0457176{col 26}{space 2} .0148847{col 37}{space 1}    3.07{col 46}{space 3}0.002{col 54}{space 4} .0165355{col 67}{space 3} .0748997
+{txt}{space 3}20190822  {c |}{col 14}{res}{space 2} .0152194{col 26}{space 2}   .01266{col 37}{space 1}    1.20{col 46}{space 3}0.229{col 54}{space 4} -.009601{col 67}{space 3} .0400399
+{txt}{space 3}20190823  {c |}{col 14}{res}{space 2}  .019971{col 26}{space 2} .0156505{col 37}{space 1}    1.28{col 46}{space 3}0.202{col 54}{space 4}-.0107124{col 67}{space 3} .0506544
+{txt}{space 3}20190826  {c |}{col 14}{res}{space 2}-.0777375{col 26}{space 2} .0164483{col 37}{space 1}   -4.73{col 46}{space 3}0.000{col 54}{space 4} -.109985{col 67}{space 3}  -.04549
+{txt}{space 3}20190827  {c |}{col 14}{res}{space 2} .0103655{col 26}{space 2}  .015506{col 37}{space 1}    0.67{col 46}{space 3}0.504{col 54}{space 4}-.0200347{col 67}{space 3} .0407657
+{txt}{space 3}20190828  {c |}{col 14}{res}{space 2}  .009405{col 26}{space 2} .0170419{col 37}{space 1}    0.55{col 46}{space 3}0.581{col 54}{space 4}-.0240064{col 67}{space 3} .0428163
+{txt}{space 3}20190829  {c |}{col 14}{res}{space 2}-.0102182{col 26}{space 2} .0160008{col 37}{space 1}   -0.64{col 46}{space 3}0.523{col 54}{space 4}-.0415885{col 67}{space 3} .0211521
+{txt}{space 3}20190830  {c |}{col 14}{res}{space 2}-.0524662{col 26}{space 2} .0145427{col 37}{space 1}   -3.61{col 46}{space 3}0.000{col 54}{space 4}-.0809778{col 67}{space 3}-.0239546
+{txt}{space 3}20190903  {c |}{col 14}{res}{space 2}-.0262777{col 26}{space 2} .0134163{col 37}{space 1}   -1.96{col 46}{space 3}0.050{col 54}{space 4}-.0525809{col 67}{space 3} .0000255
+{txt}{space 3}20190904  {c |}{col 14}{res}{space 2}-.0594793{col 26}{space 2} .0154532{col 37}{space 1}   -3.85{col 46}{space 3}0.000{col 54}{space 4}-.0897761{col 67}{space 3}-.0291826
+{txt}{space 3}20190905  {c |}{col 14}{res}{space 2}-.1508274{col 26}{space 2}  .016882{col 37}{space 1}   -8.93{col 46}{space 3}0.000{col 54}{space 4}-.1839253{col 67}{space 3}-.1177294
+{txt}{space 3}20190906  {c |}{col 14}{res}{space 2}-.0654359{col 26}{space 2} .0122633{col 37}{space 1}   -5.34{col 46}{space 3}0.000{col 54}{space 4}-.0894787{col 67}{space 3}-.0413932
+{txt}{space 3}20190909  {c |}{col 14}{res}{space 2}-.0807348{col 26}{space 2} .0129863{col 37}{space 1}   -6.22{col 46}{space 3}0.000{col 54}{space 4} -.106195{col 67}{space 3}-.0552746
+{txt}{space 3}20190910  {c |}{col 14}{res}{space 2}-.1016116{col 26}{space 2} .0124308{col 37}{space 1}   -8.17{col 46}{space 3}0.000{col 54}{space 4}-.1259827{col 67}{space 3}-.0772405
+{txt}{space 3}20190911  {c |}{col 14}{res}{space 2}-.1657398{col 26}{space 2} .0138565{col 37}{space 1}  -11.96{col 46}{space 3}0.000{col 54}{space 4}-.1929061{col 67}{space 3}-.1385735
+{txt}{space 3}20190912  {c |}{col 14}{res}{space 2}-.1515421{col 26}{space 2} .0118059{col 37}{space 1}  -12.84{col 46}{space 3}0.000{col 54}{space 4}-.1746881{col 67}{space 3}-.1283962
+{txt}{space 3}20190913  {c |}{col 14}{res}{space 2}-.2047727{col 26}{space 2} .0132989{col 37}{space 1}  -15.40{col 46}{space 3}0.000{col 54}{space 4}-.2308457{col 67}{space 3}-.1786997
+{txt}{space 3}20190917  {c |}{col 14}{res}{space 2}  -.14578{col 26}{space 2} .0123117{col 37}{space 1}  -11.84{col 46}{space 3}0.000{col 54}{space 4}-.1699177{col 67}{space 3}-.1216424
+{txt}{space 3}20190918  {c |}{col 14}{res}{space 2}-.1300118{col 26}{space 2} .0118328{col 37}{space 1}  -10.99{col 46}{space 3}0.000{col 54}{space 4}-.1532105{col 67}{space 3}-.1068131
+{txt}{space 3}20190919  {c |}{col 14}{res}{space 2}-.1516481{col 26}{space 2}  .011494{col 37}{space 1}  -13.19{col 46}{space 3}0.000{col 54}{space 4}-.1741824{col 67}{space 3}-.1291137
+{txt}{space 3}20190920  {c |}{col 14}{res}{space 2} -.145754{col 26}{space 2} .0116457{col 37}{space 1}  -12.52{col 46}{space 3}0.000{col 54}{space 4}-.1685858{col 67}{space 3}-.1229222
+{txt}{space 3}20190924  {c |}{col 14}{res}{space 2}-.1733539{col 26}{space 2} .0139281{col 37}{space 1}  -12.45{col 46}{space 3}0.000{col 54}{space 4}-.2006605{col 67}{space 3}-.1460473
+{txt}{space 3}20190925  {c |}{col 14}{res}{space 2} -.139937{col 26}{space 2}  .013125{col 37}{space 1}  -10.66{col 46}{space 3}0.000{col 54}{space 4} -.165669{col 67}{space 3}-.1142049
+{txt}{space 3}20190926  {c |}{col 14}{res}{space 2}-.2268237{col 26}{space 2} .0135436{col 37}{space 1}  -16.75{col 46}{space 3}0.000{col 54}{space 4}-.2533765{col 67}{space 3}-.2002709
+{txt}{space 3}20190927  {c |}{col 14}{res}{space 2}-.1867555{col 26}{space 2} .0140605{col 37}{space 1}  -13.28{col 46}{space 3}0.000{col 54}{space 4}-.2143218{col 67}{space 3}-.1591893
+{txt}{space 3}20191001  {c |}{col 14}{res}{space 2}-.1144293{col 26}{space 2} .0133224{col 37}{space 1}   -8.59{col 46}{space 3}0.000{col 54}{space 4}-.1405484{col 67}{space 3}-.0883103
+{txt}{space 3}20191002  {c |}{col 14}{res}{space 2}-.1083092{col 26}{space 2} .0125862{col 37}{space 1}   -8.61{col 46}{space 3}0.000{col 54}{space 4}-.1329849{col 67}{space 3}-.0836335
+{txt}{space 3}20191004  {c |}{col 14}{res}{space 2}-.0897615{col 26}{space 2} .0141377{col 37}{space 1}   -6.35{col 46}{space 3}0.000{col 54}{space 4} -.117479{col 67}{space 3} -.062044
+{txt}{space 3}20191007  {c |}{col 14}{res}{space 2} -.067793{col 26}{space 2}  .014217{col 37}{space 1}   -4.77{col 46}{space 3}0.000{col 54}{space 4}-.0956661{col 67}{space 3}  -.03992
+{txt}{space 3}20191008  {c |}{col 14}{res}{space 2}-.1210614{col 26}{space 2}  .015081{col 37}{space 1}   -8.03{col 46}{space 3}0.000{col 54}{space 4}-.1506283{col 67}{space 3}-.0914945
+{txt}{space 3}20191009  {c |}{col 14}{res}{space 2}-.1044915{col 26}{space 2} .0129192{col 37}{space 1}   -8.09{col 46}{space 3}0.000{col 54}{space 4}  -.12982{col 67}{space 3}-.0791629
+{txt}{space 3}20191010  {c |}{col 14}{res}{space 2}-.1146177{col 26}{space 2} .0148024{col 37}{space 1}   -7.74{col 46}{space 3}0.000{col 54}{space 4}-.1436384{col 67}{space 3} -.085597
+{txt}{space 3}20191015  {c |}{col 14}{res}{space 2}-.2015717{col 26}{space 2} .0145687{col 37}{space 1}  -13.84{col 46}{space 3}0.000{col 54}{space 4}-.2301343{col 67}{space 3}-.1730092
+{txt}{space 3}20191016  {c |}{col 14}{res}{space 2}-.1861222{col 26}{space 2} .0133078{col 37}{space 1}  -13.99{col 46}{space 3}0.000{col 54}{space 4}-.2122128{col 67}{space 3}-.1600317
+{txt}{space 3}20191017  {c |}{col 14}{res}{space 2}-.1246381{col 26}{space 2} .0128631{col 37}{space 1}   -9.69{col 46}{space 3}0.000{col 54}{space 4}-.1498567{col 67}{space 3}-.0994195
+{txt}{space 3}20191021  {c |}{col 14}{res}{space 2}-.1008976{col 26}{space 2} .0146999{col 37}{space 1}   -6.86{col 46}{space 3}0.000{col 54}{space 4}-.1297175{col 67}{space 3}-.0720778
+{txt}{space 3}20191023  {c |}{col 14}{res}{space 2}-.1513769{col 26}{space 2} .0144454{col 37}{space 1}  -10.48{col 46}{space 3}0.000{col 54}{space 4}-.1796978{col 67}{space 3}-.1230561
+{txt}{space 3}20191025  {c |}{col 14}{res}{space 2}-.1539337{col 26}{space 2} .0140053{col 37}{space 1}  -10.99{col 46}{space 3}0.000{col 54}{space 4}-.1813917{col 67}{space 3}-.1264757
+{txt}{space 3}20191028  {c |}{col 14}{res}{space 2}-.1792724{col 26}{space 2} .0131337{col 37}{space 1}  -13.65{col 46}{space 3}0.000{col 54}{space 4}-.2050215{col 67}{space 3}-.1535234
+{txt}{space 3}20191029  {c |}{col 14}{res}{space 2}-.2294758{col 26}{space 2} .0129355{col 37}{space 1}  -17.74{col 46}{space 3}0.000{col 54}{space 4}-.2548364{col 67}{space 3}-.2041153
+{txt}{space 3}20191030  {c |}{col 14}{res}{space 2}-.3262289{col 26}{space 2} .0118983{col 37}{space 1}  -27.42{col 46}{space 3}0.000{col 54}{space 4} -.349556{col 67}{space 3}-.3029018
+{txt}{space 3}20191031  {c |}{col 14}{res}{space 2}-.2052526{col 26}{space 2} .0124321{col 37}{space 1}  -16.51{col 46}{space 3}0.000{col 54}{space 4}-.2296262{col 67}{space 3}-.1808789
+{txt}{space 12} {c |}
+{space 7}_cons {c |}{col 14}{res}{space 2}-6.088296{col 26}{space 2} .0084541{col 37}{space 1} -720.16{col 46}{space 3}0.000{col 54}{space 4}-6.104871{col 67}{space 3}-6.071722
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+
+{com}. log close
+      {txt}name:  {res}<unnamed>
+       {txt}log:  {res}/media/guolewen/regular_files/guolewen/Market_invariance/JAPAN/pooled_results/pooled_results.smcl
+  {txt}log type:  {res}smcl
+ {txt}closed on:  {res}10 Mar 2021, 00:53:41
+{txt}{.-}
+{smcl}
+{txt}{sf}{ul off}

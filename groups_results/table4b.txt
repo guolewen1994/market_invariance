@@ -1,0 +1,16 @@
+Table IVb OLS Estimates of Number of Prints for Volume Groups											
+		(1)	(2)	(3)	(4)	(5)	(6)	(7)	(8)	(9)	(10)
+VARIABLES	LABELS	Volume 1	Volume 2	Volume 3	Volume 4	Volume 5	Volume 6	Volume 7	Volume 8	Volume 9	Volume 10
+											
+logw1dbw1	Log Adj-Trading Activity	0.618***	0.650***	0.635***	0.623***	0.618***	0.622***	0.620***	0.567***	0.599***	0.585***
+		(0.006)	(0.004)	(0.006)	(0.014)	(0.010)	(0.010)	(0.009)	(0.039)	(0.009)	(0.010)
+Constant	Constant	4.853***	5.129***	5.242***	5.295***	5.328***	5.235***	5.223***	5.311***	5.237***	5.437***
+		(0.017)	(0.003)	(0.002)	(0.016)	(0.018)	(0.021)	(0.022)	(0.112)	(0.031)	(0.048)
+											
+Observations		124,209	84,887	41,800	41,906	20,788	20,297	20,386	20,681	21,097	21,177
+Adjusted R-squared		0.889	0.864	0.861	0.842	0.836	0.852	0.832	0.835	0.851	0.868
+Stock FE		YES	YES	YES	YES	YES	YES	YES	YES	YES	YES
+Day FE		NO	NO	NO	NO	NO	NO	NO	NO	NO	NO
+Coef Equal 2/3 p-val		0.000	0.001	0.000	0.005	0.000	0.000	0.000	0.016	0.000	0.000
+Robust standard errors in parentheses											
+*** p<0.01, ** p<0.05, * p<0.1											

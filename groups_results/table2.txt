@@ -1,0 +1,16 @@
+Table II Pooled Least Square Estimates of Number of Prints		
+		(1)
+VARIABLES	LABELS	OLS
+		
+logw1dbw1	Log Adj-Trading Activity	0.679***
+		(0.009)
+Constant	Constant	5.101***
+		(0.019)
+		
+Observations		417,228
+Adjusted R-squared		0.911
+Stock FE		NO
+Day FE		NO
+W Equal2/3 p-val		0.146
+Robust standard errors in parentheses		
+*** p<0.01, ** p<0.05, * p<0.1		

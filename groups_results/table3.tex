@@ -1,0 +1,22 @@
+\documentclass[]{article}
+\setlength{\pdfpagewidth}{8.5in} \setlength{\pdfpageheight}{11in}
+\begin{document}
+\begin{tabular}{lccccc}
+\multicolumn{6}{c}{Table III OLS Estimates of Number of Prints for Ticksize Groups} \\ \hline
+ & (1) & (2) & (3) & (4) & (5) \\
+VARIABLES & Ticksize 1 & Ticksize 5 & Ticksize 10 & Ticksize 50 & Ticksize 100 \\ \hline
+ &  &  &  &  &  \\
+Log Adj-Trading Activity & 0.711*** & 0.751*** & 0.747*** & 0.814*** & 0.740*** \\
+ & (0.008) & (0.011) & (0.012) & (0.065) & (0.026) \\
+Constant & 5.241*** & 4.484*** & 4.136*** & 3.057** & 3.334*** \\
+ & (0.016) & (0.022) & (0.040) & (0.468) & (0.168) \\
+ &  &  &  &  &  \\
+Observations & 419,160 & 53,949 & 28,718 & 401 & 353 \\
+Adjusted R-squared & 0.933 & 0.959 & 0.944 & 0.886 & 0.819 \\
+Stock FE & NO & NO & NO & NO & NO \\
+Day FE & NO & NO & NO & NO & NO \\
+ Coef Equal 2/3 p-val & 0.000 & 0.000 & 0.000 & 0.150 & 0.104 \\ \hline
+\multicolumn{6}{c}{ Robust standard errors in parentheses} \\
+\multicolumn{6}{c}{ *** p$<$0.01, ** p$<$0.05, * p$<$0.1} \\
+\end{tabular}
+\end{document}

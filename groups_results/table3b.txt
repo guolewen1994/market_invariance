@@ -1,0 +1,16 @@
+Table IIIb OLS Estimates of Number of Prints for Ticksize Groups						
+		(1)	(2)	(3)	(4)	(5)
+VARIABLES	LABELS	Ticksize 1	Ticksize 5	Ticksize 10	Ticksize 50	Ticksize 100
+						
+logw1dbw1	Log Adj-Trading Activity	0.624***	0.657***	0.638***	0.652***	0.689***
+		(0.004)	(0.006)	(0.011)	(0.027)	(0.022)
+Constant	Constant	5.207***	4.597***	4.424***	4.018***	3.657***
+		(0.001)	(0.008)	(0.028)	(0.165)	(0.133)
+						
+Observations		349,005	44,110	23,483	323	307
+Adjusted R-squared		0.967	0.978	0.973	0.932	0.808
+Stock FE		YES	YES	YES	YES	YES
+Day FE		NO	NO	NO	NO	NO
+Coef Equal 2/3 p-val		0.000	0.112	0.012	0.633	0.417
+Robust standard errors in parentheses						
+*** p<0.01, ** p<0.05, * p<0.1						

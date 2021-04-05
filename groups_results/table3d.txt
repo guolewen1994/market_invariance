@@ -1,0 +1,12 @@
+Table IIIc Restricted OLS Estimates of Number of Prints for Volume Groups: Order Split Calibration											
+		(1)	(2)	(3)	(4)	(5)	(6)	(7)	(8)	(9)	(10)
+VARIABLES	LABELS	Volume 1	Volume 2	Volume 3	Volume 4	Volume 5	Volume 6	Volume 7	Volume 8	Volume 9	Volume 10
+											
+Constant	Constant	-1.125***	-0.975***	-0.884***	-0.868***	-0.869***	-0.969***	-1.004***	-1.093***	-1.118***	-1.056***
+		(0.042)	(0.012)	(0.024)	(0.018)	(0.037)	(0.027)	(0.047)	(0.047)	(0.053)	(0.078)
+											
+Observations		124,209	84,887	41,800	41,906	20,788	20,297	20,386	20,681	21,097	21,177
+mu		0.325	0.377	0.413	0.420	0.419	0.379	0.366	0.335	0.327	0.348
+rmse		0.629	0.475	0.446	0.462	0.466	0.509	0.470	0.607	0.526	0.582
+Robust standard errors in parentheses											
+*** p<0.01, ** p<0.05, * p<0.1											

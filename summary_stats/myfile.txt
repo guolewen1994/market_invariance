@@ -1,0 +1,18 @@
+	(1)	(2)	(3)	(4)	(5)	(6)	(7)	(8)	(9)	(10)	(11)	(12)	(13)	(14)	(15)	(16)	(17)	(18)
+	paid 0	paid 0	paid 0	paid 0	paid 0	paid 0	paid 1	paid 1	paid 1	paid 1	paid 1	paid 1	paid 2	paid 2	paid 2	paid 2	paid 2	paid 2
+	heavy 0	heavy 0	heavy 1	heavy 1	heavy 2	heavy 2	heavy 0	heavy 0	heavy 1	heavy 1	heavy 2	heavy 2	heavy 0	heavy 0	heavy 1	heavy 1	heavy 2	heavy 2
+mileage	Freq	Percent	Freq	Percent	Freq	Percent	Freq	Percent	Freq	Percent	Freq	Percent	Freq	Percent	Freq	Percent	Freq	Percent
+																		
+0																	2	(13.33)
+1											2	(33.33)					10	(66.67)
+2									1	(8.333)					2	(50)	1	(6.667)
+3			1	(11.11)	1	(25)			2	(16.67)	4	(66.67)	1	(16.67)				
+4			1	(11.11)	3	(75)			4	(33.33)								
+5	1	(9.091)	2	(22.22)					2	(16.67)					1	(25)	2	(13.33)
+6	1	(9.091)	2	(22.22)					2	(16.67)			3	(50)				
+7			3	(33.33)			1	(14.29)										
+8	3	(27.27)					4	(57.14)	1	(8.333)			2	(33.33)	1	(25)		
+9	6	(54.55)					2	(28.57)										
+lognprints																		
+																		
+Total	11		9		4		7		12		6		6		4		15	

@@ -1,0 +1,24 @@
+	(1)	(2)	(3)
+VARIABLES	mpg	mpg	mpg
+			
+foreign	-1.967	4.946***	
+	(1.181)	(1.362)	
+weight	-0.00420**		-0.00601***
+	(0.00202)		(0.000518)
+headroom	-0.0592		
+	(0.645)		
+trunk	-0.0122		
+	(0.159)		
+length	-0.0631		
+	(0.0644)		
+turn	-0.165		
+	(0.198)		
+displacement	0.000792		
+	(0.0103)		
+Constant	53.14***	19.83***	39.44***
+	(7.584)	(0.743)	(1.614)
+			
+Observations	74	74	74
+R-squared	0.677	0.155	0.652
+Standard errors in parentheses			
+*** p<0.01, ** p<0.05, * p<0.1			

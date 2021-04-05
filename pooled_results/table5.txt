@@ -1,0 +1,16 @@
+Table V Pooled Least Square Estimates of Quantile Print Sizes									
+		(1)	(2)	(3)	(4)	(5)	(6)	(7)	(8)
+VARIABLES	LABELS	Volume-Weighted	Trade-Weighted	Volume-Weighted	Volume-Weighted	Volume-Weighted	Trade-Weighted	Trade-Weighted	Trade-Weighted
+									
+logw1dbw1	Log Adj-Trading Activity	-0.610***	-0.746***	-0.501***	-0.611***	-0.504***	-0.705***	-0.745***	-0.699***
+		(0.008)	(0.011)	(0.012)	(0.008)	(0.012)	(0.007)	(0.011)	(0.007)
+Constant	Constant	-4.541***	-5.939***	-4.546***	-4.541***	-4.608***	-5.941***	-5.939***	-5.854***
+		(0.022)	(0.031)	(0.001)	(0.022)	(0.015)	(0.000)	(0.031)	(0.014)
+									
+Observations		417,228	417,228	417,228	417,228	417,228	417,228	417,228	417,228
+Adjusted R-squared		0.761	0.885	0.850	0.770	0.859	0.965	0.887	0.967
+Stock FE		NO	NO	YES	NO	YES	YES	NO	YES
+Day FE		NO	NO	NO	YES	YES	NO	YES	YES
+Coef Equal -2/3 p-val		0.000	0.000	0.000	0.000	0.000	0.000	0.000	0.000
+Robust standard errors in parentheses									
+*** p<0.01, ** p<0.05, * p<0.1									
